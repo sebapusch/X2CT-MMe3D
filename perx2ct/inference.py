@@ -4,7 +4,7 @@ import math
 import time
 from copy import deepcopy
 
-import imageio
+import cv2
 import numpy as np
 import torch
 from torch import Tensor
@@ -15,23 +15,30 @@ from main_test import load_config, change_config_file_to_fixed_val, load_vqgan
 from save_to_volume import save_nifti
 
 def load_and_preprocess_xray(path, cam_type, min_val=0, max_val=255) -> Tensor:
-    img = imageio.imread(path)
+    def load_and_preprocess_xray(path, cam_type, min_val=0, max_val=255, target_size=(320, 320)) -> Tensor:
+        # Load in grayscale
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)  # Shape: [H, W], single-channel
 
-    if cam_type == "PA":
-        img = np.fliplr(img)
-    elif cam_type == "Lateral":
-        img = np.transpose(img, (1, 0))
-        img = np.flipud(img)
+        # Apply camera-dependent transformations
+        if cam_type == "PA":
+            img = np.fliplr(img)
+        elif cam_type == "Lateral":
+            img = np.transpose(img, (1, 0))
+            img = np.flipud(img)
 
-    img = np.expand_dims(img, -1)              # Shape: [H, W, 1]
-    img = np.concatenate([img]*3, axis=-1)     # Shape: [H, W, 3]
+        # Resize to target size (OpenCV expects (width, height))
+        img = cv2.resize(img, target_size)
 
-    img = (img - min_val) / (max_val - min_val)
-    img = np.clip(img, 0, 1)
+        # Normalize and expand to 3-channel
+        img = np.expand_dims(img, -1)  # [H, W, 1]
+        img = np.concatenate([img] * 3, axis=-1)  # [H, W, 3]
+        img = (img - min_val) / (max_val - min_val)
+        img = np.clip(img, 0, 1)
 
-    img_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
+        # Convert to tensor with shape [1, H, W, 3]
+        img_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
 
-    return img_tensor
+        return img_tensor
 
 @torch.no_grad()
 def test(dicts, images, save_dir):
