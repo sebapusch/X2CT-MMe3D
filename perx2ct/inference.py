@@ -103,17 +103,17 @@ def main_test(args):
     test(dicts, [[
        './experiment/ct128_plastimatch_xray/1_xray1.png',
        './experiment/ct128_plastimatch_xray/1_xray2.png',
-    ]], './out')
+    ]], args.save_dir)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CT Inference')
     parser.add_argument('--save_dir', type=str, required=True)
     parser.add_argument('--val_test', type=str, default='val')
-    parser.add_argument('--sub_batch_size', type=int)
+    parser.add_argument('--sub_batch_size', type=int, default=1)
     parser.add_argument('--config_path', type=str)
     parser.add_argument('--ckpt_path', type=str)
-    parser.add_argument('--ckpt_name', type=str, default='last.ckpt')
+    parser.add_argument('--ckpt_name', type=str, default='PerX2CT.ckpt')
     args = parser.parse_args()
     torch.set_grad_enabled(False)
     main_test(args)
