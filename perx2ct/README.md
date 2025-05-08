@@ -1,69 +1,100 @@
-# PerX2CT (Modified Inference Setup)
+# PerX2CT Wrapper & Synthetic CT Generation
 
-This folder provides a lightweight, patched setup of [PerX2CT](https://github.com/dek924/PerX2CT) for running CT reconstruction inference using paired X-ray images.
+This repository provides a wrapper and CLI utility for generating synthetic 3D CT volumes from paired biplanar X-ray images using the [PerX2CT](https://arxiv.org/abs/2303.05297) model. It is a crucial preprocessing component of the multimodal classification pipeline for enhanced pulmonary diagnosis.
 
-It includes:
-- Minimal patches to the original repo
-- A clean setup script
-- An inference-ready configuration
-- A pretrained checkpoint (via Git LFS)
+## 📁 Project Structure
+
+```
+.
+├── checkpoints/              # Contains PerX2CT model checkpoint
+│   └── PerX2CT.ckpt
+├── configs/                  # YAML configuration for the model
+│   └── PerX2CT.yaml
+├── patches/                  # Custom patches for the PerX2CT model
+│   ├── INREncoderZoomAxisInAlign.py
+│   └── model.py
+├── generate_synthetic_volumes.py  # Script to create synthetic CTs
+├── inference.py              # Inference wrapper class
+├── save_to_volume.py         # Utilities to save CT volume in NIfTI/HDF5/NPY
+├── setup.sh                  # Setup script for environment
+└── README.md                 # You are here
+```
 
 ---
 
-## 🚀 Quick Start
+## 🔍 Inference Wrapper (`inference.py`)
 
-### 1. Clone and Set Up
+The `Inference` class handles PerX2CT loading and slice-wise reconstruction of 3D CT volumes from a pair of X-ray images.
 
-Run this from the root of your main repository:
+### Key Features:
+- Loads model and config via patched PerX2CT framework
+- Handles preprocessing of frontal (PA) and lateral X-rays
+- Iteratively reconstructs 128 axial slices
+- Supports GPU or CPU inference
+
+### Usage (Python):
+
+```python
+from inference import Inference
+model = Inference(config_path='configs/PerX2CT.yaml',
+                  ckpt_path='checkpoints/PerX2CT.ckpt',
+                  dev=torch.device('cuda:0'))
+
+volume = model('path/to/frontal.png', 'path/to/lateral.png')  # torch.Tensor [128, 128, 128]
+```
+
+---
+
+## 🧪 Script: `generate_synthetic_volumes.py`
+
+This script generates synthetic CT volumes for a dataset of paired X-ray projections and writes them to disk.
+
+### Inputs:
+- `--csv_reports_path`: Path to CSV with report metadata (includes `uid`)
+- `--csv_projections_path`: Path to CSV with filenames and projections (must include `uid`, `projection`, `filename`)
+- `--projection_dir`: Directory containing raw X-ray images
+- `--save_dir`: Output directory for saving volumes and updated projections CSV
+
+### Output:
+- 3D CT volumes saved as `.h5` files named `{uid}_ct_synthetic.h5`
+- New `projections_synth.csv` CSV file mapping each `uid` to the synthetic volume
+
+### CLI Example:
 
 ```bash
-cd perx2ct
-git lfs install
-git lfs pull   # Make sure the checkpoint is downloaded
-chmod +x setup.sh
-./setup.sh
+python generate_synthetic_volumes.py \
+  --csv_reports_path ./data/reports.csv \
+  --csv_projections_path ./data/projections.csv \
+  --projection_dir ./data/images/ \
+  --save_dir ./outputs/
 ```
 
-This will:
-- Clone the original PerX2CT repo
-- Apply required patches
-- Copy inference script, config, and model checkpoint
+You can optionally use `--start_from` and `--end_at` to generate a subset.
 
-After setup, the full project is ready in `./PerX2CT`.
 ---
 
-### 2. Run Inference
+## 💾 Volume Saving Options (`save_to_volume.py`)
 
-You can now run inference on a pair of frontal/lateral X-rays:
+Supports saving the output tensor as:
+- `.nii` or `.nii.gz` (NIfTI format)
+- `.h5` (default, HDF5 format)
+- `.npy` (NumPy array)
+
+Default used in the script is `.h5`. To change this, modify the `CT_EXTENSION` variable in `generate_synthetic_volumes.py`.
+
+---
+
+## ⚙️ Setup
+
+Before using the repository:
 
 ```bash
-cd PerX2CT
-
-python inference.py \
-  --config_path ./configs/PerX2CT.yaml \
-  --ckpt_path   ./checkpoints/PerX2CT.ckpt \
-  --save_dir    ./experiment
+chmod +x setup.sh # Make executable
+./setup.sh        # installs dependencies and patches
 ```
-
-- `--config_path`: Path to the patched YAML config
-- `--ckpt_path`: Path to the downloaded model checkpoint
-- `--save_dir`: Output directory for reconstructed volumes (e.g. `.nii.gz`)
 
 ---
 
-## 🧩 File Structure
+## 📚 References
 
-```
-perx2ct/
-├── configs/
-│   └── PerX2CT.yaml               # Cleaned config file
-├── inference.py                   # Entry point for running inference
-├── save_to_volume.py              # NIfTI saving utility
-├── checkpoints/
-│   └── PerX2CT.ckpt               # Pretrained model (via Git LFS)
-├── patches/
-│   ├── model.py                   # Patched NeRF logic
-│   └── INREncoderZoomAxisInAlign.py
-├── setup.sh                       # Setup script
-└── README.md
-```
+- **PerX2CT**: Kyung et al., ICASSP 2023. [arXiv:2303.05297](https://arxiv.org/abs/2303.05297)
