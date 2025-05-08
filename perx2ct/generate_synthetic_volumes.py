@@ -3,11 +3,10 @@ from os import path
 import torch
 import pandas as pd
 from argparse import Namespace, ArgumentParser
-
 from tqdm import tqdm
 
 from inference import Inference
-from save_to_volume import save_nifti
+from save_to_volume import save
 
 
 CHECKPOINT_PATH = './checkpoints/PerX2CT.ckpt'
@@ -37,7 +36,7 @@ def main(args: Namespace):
 
         volume = model(path_front, path_lat)
         filename = f'{uid}_ct_synthetic.{CT_EXTENSION}'
-        save_nifti(volume.cpu().numpy(), path.join(args.save_dir, filename))
+        save(volume.cpu().numpy(), path.join(args.save_dir, filename))
 
         row_df = pd.DataFrame([
             frontal.to_dict(),
