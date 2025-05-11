@@ -19,7 +19,7 @@ def main(args: Namespace):
     reports = pd.read_csv(args.csv_reports_path)
     files = pd.read_csv(args.csv_projections_path)
 
-    model = Inference(CONFIG_PATH, CHECKPOINT_PATH, DEVICE)
+    model = Inference(CONFIG_PATH, CHECKPOINT_PATH, DEVICE, False)
 
     updated_projections = pd.DataFrame(columns=files.columns)
 
@@ -28,23 +28,28 @@ def main(args: Namespace):
     reports_subset = reports.iloc[start:end]
 
     for uid in tqdm(reports_subset['uid']):
-        frontal = files[(files['uid'] == uid) & (files['projection'] == 'Frontal')].iloc[0]
-        lateral = files[(files['uid'] == uid) & (files['projection'] == 'Lateral')].iloc[0]
+        try:
+            frontal = files[(files['uid'] == uid) & (files['projection'] == 'Frontal')].iloc[0]
+            lateral = files[(files['uid'] == uid) & (files['projection'] == 'Lateral')].iloc[0]
 
-        path_front = str(path.join(args.projection_dir, frontal['filename']))
-        path_lat   = str(path.join(args.projection_dir, lateral['filename']))
+            path_front = str(path.join(args.projection_dir, frontal['filename']))
+            path_lat = str(path.join(args.projection_dir, lateral['filename']))
 
-        volume = model(path_front, path_lat)
-        filename = f'{uid}_ct_synthetic.{CT_EXTENSION}'
-        save(volume.cpu().numpy(), path.join(args.save_dir, filename))
+            volume = model(path_front, path_lat)
+            filename = f'{uid}_ct_synthetic.{CT_EXTENSION}'
+            save(volume.cpu().numpy(), path.join(args.save_dir, filename))
 
-        row_df = pd.DataFrame([
-            frontal.to_dict(),
-            lateral.to_dict(),
-            {'uid': uid, 'projection': 'Volume', 'filename': filename}
-        ])
+            row_df = pd.DataFrame([
+                frontal.to_dict(),
+                lateral.to_dict(),
+                {'uid': uid, 'projection': 'Volume', 'filename': filename}
+            ])
 
-        updated_projections = pd.concat([updated_projections, row_df], ignore_index=True)
+            updated_projections = pd.concat([updated_projections, row_df], ignore_index=True)
+        except Exception as e:
+            print(f'Could not generate scan at uid \'{uid}\': {e}')
+
+
 
     updated_projections.to_csv(path.join(args.save_dir, 'projections_synth.csv'), index=False)
 

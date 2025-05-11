@@ -2,7 +2,7 @@
 #SBATCH --job-name=gen_synth_array
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=1
 #SBATCH --output=logs/gen_array_%A_%a.out
@@ -10,7 +10,6 @@
 #SBATCH --array=0-9  # 10 jobs (0 to 9)
 
 # Load python module
-module purge
 module load Python/3.8.16-GCCcore-11.2.0
 
 # ========== CONFIGURATION ==========
