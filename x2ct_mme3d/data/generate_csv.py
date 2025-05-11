@@ -1,21 +1,44 @@
 import pandas as pd
 
-df = pd.read_csv('indiana_reports.csv')
+KEYWORDS = [
+    'atelectasis', 
+    'pneumonia', 
+    'pleural effusion',
+    'pulmonary edema',
+    'pulmonary disease',
+    'pulmonary congestion', 
+    'emphysema',
+    'bronchiectasis', 
+    'pulmonary fibrosis', 
+    'interstitial lung disease',
+    'copd', 
+    'lung mass', 
+    'pulmonary mass', 
+    'hilar enlargement', 
+    'infiltrate',
+    'airspace disease',
+    'deformity'
+]
 
-output = []
-normal = []
 
-for i, problem in enumerate(df['Problems']):
-    problem = problem.lower()
+df = pd.read_csv("indiana_reports.csv")
 
+labels = []
+filtered_rows = []
 
-    if 'normal' in problem or 'atelectasis' in problem or 'opacity' in problem or 'pleural effusion' in problem or 'pulmonary edema' in problem or 'pulmonary congestion' in problem or 'pulmonary emphysema' in problem or 'pneumonia' in problem or 'lung' in problem:
-        normal.append(1 if 'normal' in problem else 0)
-        output.append(df.iloc[i])
+for idx, row in df.iterrows():
+    problem = str(row['Problems']).lower()
 
-out = pd.DataFrame(output)
-out['normal'] = normal
+    if 'normal' in problem:
+        labels.append(0)
+        filtered_rows.append(row)
+    elif  any(kw in problem for kw in KEYWORDS) or ('opacity' in problem and 'lung' in problem):
+        labels.append(1)
+        filtered_rows.append(row)
 
+filtered_df = pd.DataFrame(filtered_rows)
+filtered_df['normal'] = labels
 
-out.to_csv('output.csv', index=False)
+output_path = "outptu.csv"
 
+filtered_df.to_csv(output_path, index=False)
