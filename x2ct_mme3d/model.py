@@ -3,14 +3,8 @@ import torch
 import torch.nn as nn
 from torch.nn import Linear
 
-from resnet import resnet18
+from lib.resnet import resnet18
 
-
-CHECKPOINT_PATH = hf_hub_download(
-    repo_id='TencentMedicalNet/MedicalNet-Resnet18',
-    filename='resnet_18_23dataset.pth',
-    cache_dir='checkpoints'
-)
 
 class Med3DBackbone(nn.Module):
     """
@@ -19,7 +13,7 @@ class Med3DBackbone(nn.Module):
     def __init__(self):
         super(Med3DBackbone, self).__init__()
         model = resnet18(sample_input_D=64, shortcut_type='A')
-        state = torch.load(CHECKPOINT_PATH)
+        state = torch.load(_load_med3d_checkpoint())
         self.model.load_state_dict(state)
 
         # only include backbone layers
@@ -40,6 +34,7 @@ class Med3DBackbone(nn.Module):
 
         return x
 
+
 class X2CTMed3D(nn.Module):
     def __init__(self):
         super(X2CTMed3D, self).__init__()
@@ -52,3 +47,11 @@ class X2CTMed3D(nn.Module):
         x = self.classifier(features_3d)
 
         return x
+
+
+def _load_med3d_checkpoint() -> str:
+    return hf_hub_download(
+        repo_id='TencentMedicalNet/MedicalNet-Resnet18',
+        filename='resnet_18_23dataset.pth',
+        cache_dir='models/checkpoints'
+    )
