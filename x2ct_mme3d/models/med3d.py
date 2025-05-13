@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn import Linear
 
-from lib.resnet import resnet18
+from x2ct_mme3d.lib.resnet import resnet18
 
 
 class Med3DBackbone(nn.Module):
