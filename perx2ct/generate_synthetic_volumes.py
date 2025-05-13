@@ -49,9 +49,7 @@ def main(args: Namespace):
         except Exception as e:
             print(f'Could not generate scan at uid \'{uid}\': {e}')
 
-
-
-    updated_projections.to_csv(path.join(args.save_dir, 'projections_synth.csv'), index=False)
+    updated_projections.to_csv(path.join(args.save_dir, f'projections_synth_[{start}-{end}].csv'), index=False)
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='CT Inference')
