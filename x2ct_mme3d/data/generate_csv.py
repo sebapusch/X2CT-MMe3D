@@ -18,9 +18,7 @@ KEYWORDS = [
     'hilar enlargement',
     'infiltrate',
     'airspace disease',
-    'deformity',
 
-    # Newly added anatomical/pathological findings
     'consolidation',
     'effusion'
     'edema',
@@ -71,15 +69,14 @@ for idx, row in df.iterrows():
     if 'normal' in problem:
         labels.append(0)
         filtered_rows.append(row)
-    elif  any(kw in problem for kw in KEYWORDS) or ('opacity' in problem and 'lung' in problem):
+    elif  (any(kw in problem for kw in KEYWORDS) or
+           ('opacity' in problem and 'lung' in problem) or
+           ('deformity' in problem and 'lung' in problem)):
         labels.append(1)
         filtered_rows.append(row)
 
 filtered_df = pd.DataFrame(filtered_rows)
 filtered_df['normal'] = labels
-
-print('normal:', len(filtered_df[filtered_df['normal'] == 1]))
-print('non normal:', len(filtered_df[filtered_df['normal'] == 0]))
 
 output_path = "output.csv"
 
