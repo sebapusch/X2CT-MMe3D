@@ -95,6 +95,15 @@ chmod +x scripts/setup.sh # Make executable
 ./scripts/setup.sh        # Installs patches, configuration and checkpoint
 ```
 
+Inside `PerX2CT` root, Create a conda environment, activate it, and install the required packages:
+```bash
+conda create -n perx2ct python=3.8
+conda activate perx2ct
+pip install --upgrade pip
+pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
+pip install -r requirement.txt
+```
+
 ---
 
 ## 🚀 SLURM Batch Script (`scripts/run_generate_dataset.slurm`)
