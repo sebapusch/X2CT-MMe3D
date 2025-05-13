@@ -16,7 +16,9 @@ This repository provides a wrapper and CLI utility for generating synthetic 3D C
 ├── generate_synthetic_volumes.py  # Script to create synthetic CTs
 ├── inference.py              # Inference wrapper class
 ├── save_to_volume.py         # Utilities to save CT volume in NIfTI/HDF5/NPY
-├── setup.sh                  # Setup script for environment
+├── scripts/
+│   ├── run_generate_dataset.slurm  # SLURM script for batch volume generation
+│   └── setup.sh              # Setup script for environment
 └── README.md                 # You are here
 ```
 
@@ -84,17 +86,44 @@ Default used in the script is `.h5`. To change this, modify the `CT_EXTENSION` v
 
 ---
 
-## ⚙️ Setup
+## ⚙️ Setup (`scripts/setup.sh`)
 
 Before using the repository:
 
 ```bash
-chmod +x setup.sh # Make executable
-./setup.sh        # installs dependencies and patches
+chmod +x scripts/setup.sh # Make executable
+./scripts/setup.sh        # Installs patches, configuration and checkpoint
 ```
+
+---
+
+## 🚀 SLURM Batch Script (`scripts/run_generate_dataset.slurm`)
+
+This script enables distributed generation of synthetic CT volumes on SLURM-managed HPC systems.
+
+### Key SLURM Directives:
+- Requests 1 GPU and 4 CPUs per task
+- Uses SLURM job arrays for parallel generation
+- Loads and activates the Python environment
+- Runs `generate_synthetic_volumes.py` on a data chunk
+
+### Usage:
+
+Submit the job array like this:
+
+```bash
+sbatch scripts/run_generate_dataset.slurm
+```
+
+Make sure to adjust the paths to:
+- Python environment (`ENV_PATH`)
+- Script location
+- CSV files and directories (`CSV_REPORTS`, `CSV_PROJECTIONS`, `PROJECTION_DIR`, `SAVE_DIR`)
+- Array partitioning logic (`TOTAL_PARTS`, `PART_INDEX`) to fit your dataset
 
 ---
 
 ## 📚 References
 
 - **PerX2CT**: Kyung et al., ICASSP 2023. [arXiv:2303.05297](https://arxiv.org/abs/2303.05297)
+- **Med3D**: Chen et al., 2019. [arXiv:1904.00625](https://arxiv.org/abs/1904.00625)
