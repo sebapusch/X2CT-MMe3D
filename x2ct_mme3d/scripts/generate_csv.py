@@ -59,8 +59,10 @@ MISSING_FILES = [
     3593,
 ]
 
-RAW_BASE_DIR = os.path.join('..', 'data', 'raw')
-PROCESSED_BASE_DIR = os.path.join('..', 'data', 'processed')
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+RAW_BASE_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
+PROCESSED_BASE_DIR = os.path.join(PROJECT_ROOT, 'data', 'processed')
 
 df = pd.read_csv(os.path.join(RAW_BASE_DIR, 'indiana_reports.csv'))
 projections_df = pd.read_csv(os.path.join(RAW_BASE_DIR, 'indiana_projections.csv'))
@@ -96,6 +98,10 @@ for idx, row in df.iterrows():
 
 filtered_df = pd.DataFrame(filtered_rows)
 filtered_df['normal'] = labels
+
+normal = len(filtered_df[filtered_df['normal'] == 1])
+
+print('normal:', normal, 'non normal:', len(filtered_df) - normal)
 
 output_path = os.path.join(PROCESSED_BASE_DIR, 'indiana_reports.csv')
 
