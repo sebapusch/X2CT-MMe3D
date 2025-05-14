@@ -67,6 +67,7 @@ class XRayCTDataset(XRayDataset):
 
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
             volume = np.array(volume['ct'])
+            volume = volume[::2,:,:]
             data['ct'] = torch.tensor(volume, dtype=torch.float32).unsqueeze(0)
 
         return data, label
