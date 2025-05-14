@@ -31,7 +31,7 @@ class XRayDataset(Dataset):
     def __len__(self) -> int:
         return len(self.reports)
 
-    def __getitem__(self, ix: int) -> (dict[str, Tensor], bool):
+    def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         report = self.reports.iloc[ix]
 
         imgs = []
@@ -45,7 +45,7 @@ class XRayDataset(Dataset):
             'lateral': self.preprocess(imgs[1])
         }
 
-        return xrays, float(report['disease'])
+        return xrays, torch.tensor(report['disease'], dtype=torch.long)
 
 
 class XRayCTDataset(XRayDataset):
@@ -58,7 +58,7 @@ class XRayCTDataset(XRayDataset):
         self.ct_dir = ct_dir
 
 
-    def __getitem__(self, ix: int) -> (dict[str, Tensor], bool):
+    def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         data, label = super().__getitem__(ix)
 
         report = self.reports.iloc[ix]
