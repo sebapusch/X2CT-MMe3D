@@ -6,6 +6,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
+import numpy as np
 import h5py as h5
 
 
@@ -35,16 +36,16 @@ class XRayDataset(Dataset):
 
         imgs = []
         for proj in ['Frontal', 'Lateral']:
-            filename = self.projections[(self.projections['uid'] == report['uid']) &
+            projection = self.projections[(self.projections['uid'] == report['uid']) &
                                    (self.projections['projection'] == proj)].iloc[0]
-            imgs.append(Image.open(os.path.join(self.xray_dir, filename)))
+            imgs.append(Image.open(os.path.join(self.xray_dir, projection['filename'])))
 
         xrays = {
             'frontal': self.preprocess(imgs[0]),
             'lateral': self.preprocess(imgs[1])
         }
 
-        return xrays, report['normal'].boolval()
+        return xrays, bool(report['disease'])
 
 
 class XRayCTDataset(XRayDataset):
@@ -61,10 +62,11 @@ class XRayCTDataset(XRayDataset):
         data, label = super().__getitem__(ix)
 
         report = self.reports.iloc[ix]
-        filename = self.projections[(self.projections['uid'] == report['uid']) &
+        projection = self.projections[(self.projections['uid'] == report['uid']) &
                                    (self.projections['projection'] == 'Volume')].iloc[0]
 
-        with h5.File(os.path.join(self.ct_dir, filename), 'r') as volume:
-            data['ct'] = torch.tensor(volume['ct'], dtype=torch.float32).unsqueeze(0)
+        with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
+            volume = np.array(volume['ct'])
+            data['ct'] = torch.tensor(volume, dtype=torch.float32).unsqueeze(0)
 
         return data, label
