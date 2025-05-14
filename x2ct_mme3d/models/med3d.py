@@ -38,7 +38,7 @@ class X2CTMed3D(nn.Module):
         super().__init__()
 
         self.backbone = Med3DBackbone()
-        self.classifier = Linear(512 * 4 * 4 * 8, 1)
+        self.classifier = Linear(1048576, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         features_3d = self.backbone(x)

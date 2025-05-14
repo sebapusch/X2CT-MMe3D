@@ -45,7 +45,7 @@ class XRayDataset(Dataset):
             'lateral': self.preprocess(imgs[1])
         }
 
-        return xrays, bool(report['disease'])
+        return xrays, float(report['disease'])
 
 
 class XRayCTDataset(XRayDataset):
