@@ -97,11 +97,11 @@ for idx, row in df.iterrows():
         filtered_rows.append(row)
 
 filtered_df = pd.DataFrame(filtered_rows)
-filtered_df['normal'] = labels
+filtered_df['disease'] = labels
 
-normal = len(filtered_df[filtered_df['normal'] == 1])
+disease = len(filtered_df[filtered_df['disease'] == 1])
 
-print('normal:', normal, 'non normal:', len(filtered_df) - normal)
+print('disease:', disease, 'normal:', len(filtered_df) - disease)
 
 output_path = os.path.join(PROCESSED_BASE_DIR, 'indiana_reports.csv')
 
