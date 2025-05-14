@@ -1,13 +1,20 @@
 from datetime import datetime
-
 import torch
 from torch.utils.data import DataLoader, Subset
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+import numpy as np
 
 from x2ct_mme3d.data.dataset import XRayCTDataset
-from x2ct_mme3d.models.med3d import X2CTMed3D, Med3DBackbone
+from x2ct_mme3d.models.med3d import X2CTMed3D
 
-EPOCHS = 5
+# Hyperparameters
+EPOCHS = 10
+BATCH_SIZE = 16
+LEARNING_RATE = 1e-3
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Dataset
 dataset = XRayCTDataset(
     './data/processed/indiana_reports.test.csv',
     './data/processed/indiana_projections.csv',
@@ -15,99 +22,84 @@ dataset = XRayCTDataset(
     './data/processed/volumes',
 )
 
-ixs = range(len(dataset))
-train_loader = DataLoader(Subset(dataset, ixs[:len(dataset) - 200]), batch_size=16, shuffle=True)
-val_loader   = DataLoader(Subset(dataset, ixs[len(dataset) - 200:]),   batch_size=16, shuffle=True)
+# Use sklearn to split indices
+all_indices = np.arange(len(dataset))
+all_labels = np.array([dataset[i][1].item() for i in all_indices])
+train_ixs, val_ixs = train_test_split(
+    all_indices,
+    test_size=0.2,
+    stratify=all_labels,
+    random_state=42
+)
 
-model = X2CTMed3D()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-loss_fn = torch.nn.CrossEntropyLoss()
+train_loader = DataLoader(Subset(dataset, train_ixs), batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(Subset(dataset, val_ixs), batch_size=BATCH_SIZE, shuffle=False)
 
-def train_one_epoch(epoch_index):
-    running_loss = 0.
-    last_loss = 0.
+# Model
+model = X2CTMed3D().to(DEVICE)
+optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+loss_fn = torch.nn.BCEWithLogitsLoss()
 
-    # Here, we use enumerate(training_loader) instead of
-    # iter(training_loader) so that we can track the batch
-    # index and do some intra-epoch reporting
-    for i, data in enumerate(train_loader):
-        # Every data instance is an input + label pair
-        inputs, labels = data
+def train_one_epoch():
+    model.train()
+    running_loss = 0.0
+    for inputs, labels in tqdm(train_loader):
+        inputs = inputs['ct'].to(DEVICE)
+        labels = labels.float().unsqueeze(1).to(DEVICE)
 
-        # Zero your gradients for every batch!
         optimizer.zero_grad()
-
-        # Make predictions for this batch
-        outputs = model(inputs['ct'])
-
-        # Compute the loss and its gradients
+        outputs = model(inputs)
         loss = loss_fn(outputs, labels)
         loss.backward()
-
-        # Adjust learning weights
         optimizer.step()
-
-        # Gather data and report
         running_loss += loss.item()
-        if i % 1000 == 999:
-            last_loss = running_loss / 1000 # loss per batch
-            print('  batch {} loss: {}'.format(i + 1, last_loss))
-            # tb_x = epoch_index * len(loader) + i + 1
-            # tb_writer.add_scalar('Loss/train', last_loss, tb_x)
-            running_loss = 0.
+    return running_loss / len(train_loader)
 
-    return last_loss
-
-# Initializing in a separate cell so we can easily add more epochs to the same run
-timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-epoch_number = 0
-
-best_vloss = 1_000_000.
-
-for epoch in range(EPOCHS):
-    print('EPOCH {}:'.format(epoch_number + 1))
-
-    # Make sure gradient tracking is on, and do a pass over the data
-    model.train(True)
-    avg_loss = train_one_epoch(epoch_number)
-
-
-    running_vloss = 0.0
-    # Set the model to evaluation mode, disabling dropout and using population
-    # statistics for batch normalization.
+def evaluate():
     model.eval()
+    running_vloss = 0.0
+    correct = 0
+    total = 0
 
-    # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
-        for i, vdata in enumerate(val_loader):
-            vinputs, vlabels = vdata
+        for vinputs, vlabels in val_loader:
+            vinputs = vinputs['ct'].to(DEVICE)
+            vlabels = vlabels.float().unsqueeze(1).to(DEVICE)
+
             voutputs = model(vinputs)
             vloss = loss_fn(voutputs, vlabels)
-            running_vloss += vloss
+            running_vloss += vloss.item()
 
-    avg_vloss = running_vloss / (i + 1)
-    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+            # Binary prediction: sigmoid + threshold
+            probs = torch.sigmoid(voutputs)
+            preds = (probs > 0.5).int()
+            labels = vlabels.int()
 
+            correct += (preds == labels).sum().item()
+            total += labels.numel()
 
-    # Track best performance, and save the model's state
-    if avg_vloss < best_vloss:
-        best_vloss = avg_vloss
-        model_path = 'models/med3d_model_{}_{}'.format(timestamp, epoch_number)
+            # Debugging sample
+            print("Preds:", preds.view(-1)[:5].cpu().numpy(),
+                  "Labels:", labels.view(-1)[:5].cpu().numpy(),
+                  "Probs:", probs.view(-1)[:5].cpu().numpy())
+
+    avg_vloss = running_vloss / len(val_loader)
+    accuracy = correct / total if total > 0 else 0.0
+    return avg_vloss, accuracy
+
+# Training Loop
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+best_vloss = float('inf')
+
+for epoch in range(EPOCHS):
+    print(f"\nEPOCH {epoch + 1}:")
+    train_loss = train_one_epoch()
+    val_loss, val_accuracy = evaluate()
+
+    print(f"LOSS train {train_loss:.4f} valid {val_loss:.4f} | Accuracy: {val_accuracy:.4f}")
+
+    if val_loss < best_vloss:
+        best_vloss = val_loss
+        model_path = f'models/med3d_model_{timestamp}_epoch{epoch}'
         torch.save(model.state_dict(), model_path)
-
-    epoch_number += 1
-
-# batch1 = next(iter(loader))
-#
-# print(torch.sigmoid(model(batch1[0]['ct'])))
-# print(batch1[1])
-
-# print(batch1[0]['ct'].shape)
-#
-# features = model(batch1[0]['ct'])
-#
-# print(features.shape)
-# print("Mean:", features.mean())
-# print("Std:", features.std())
-# print("Max:", features.max())
-# print("Min:", features.min())
+        print(f"✅ Saved new best model to {model_path}")

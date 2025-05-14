@@ -5,6 +5,7 @@ from torch import Tensor
 from torchvision import transforms
 from torch.utils.data import Dataset
 import torch
+import torchio
 import pandas as pd
 import numpy as np
 import h5py as h5
@@ -56,6 +57,12 @@ class XRayCTDataset(XRayDataset):
                  ct_dir: str):
         super().__init__(reports_csv_path, projections_csv_path, xray_dir)
         self.ct_dir = ct_dir
+        self.ct_transform = torchio.Compose([
+            torchio.RescaleIntensity(out_min_max=(0, 1), percentiles=(0.5, 99.5)),
+            torchio.ZNormalization(),
+            torchio.Resample((1.0, 1.0, 1.0)),
+            torchio.CropOrPad((64, 128, 128)),
+        ])
 
 
     def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
@@ -67,7 +74,7 @@ class XRayCTDataset(XRayDataset):
 
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
             volume = np.array(volume['ct'])
-            volume = volume[::2,:,:]
-            data['ct'] = torch.tensor(volume, dtype=torch.float32).unsqueeze(0)
+            volume = self.ct_transform(volume)
+            data['ct'] = volume.unsqueeze(0)
 
         return data, label

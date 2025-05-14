@@ -28,7 +28,6 @@ class Med3DBackbone(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
-        x = x.flatten(start_dim=1)
 
         return x
 
@@ -38,11 +37,18 @@ class X2CTMed3D(nn.Module):
         super().__init__()
 
         self.backbone = Med3DBackbone()
-        self.classifier = Linear(1048576, 1)
+        self.classifier = self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool3d(1),
+            nn.Flatten(),
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, 2)
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        features_3d = self.backbone(x)
-        x = self.classifier(features_3d)
+        x = self.backbone(x)
+        x = self.classifier(x)
 
         return x
 
