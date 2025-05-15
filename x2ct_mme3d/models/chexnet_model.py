@@ -7,7 +7,7 @@ class CheXNetBackbone(nn.Module):
     CheXNet model adapted for dual-view X-ray images (PA + LAT).
     """
 
-    def __init__(self, input_channels=2, weights_path="models/checkpoints/chexnet.pth.tar"):
+    def __init__(self, input_channels=2, weights_path="models/checkpoints_/chexnet.pth.tar"):
         super().__init__()
         self.model = _build_chexnet(input_channels, weights_path)
 
@@ -27,7 +27,7 @@ def _build_chexnet(input_channels=2, weights_path=None):
     """
 
     # 1. Load base model without ImageNet weights
-    model = models.densenet121(pretrained=False)
+    model = models.densenet121(weights=None)
 
     # 2. Modify first conv layer for 2-channel input
     original_conv = model.features.conv0
