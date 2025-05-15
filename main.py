@@ -16,7 +16,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Dataset
 dataset = XRayCTDataset(
-    './data/processed/indiana_reports.test.csv',
+    './data/processed/indiana_reports.train.csv',
     './data/processed/indiana_projections.csv',
     './data/processed/xrays',
     './data/processed/volumes',
@@ -39,6 +39,8 @@ val_loader = DataLoader(Subset(dataset, val_ixs), batch_size=BATCH_SIZE, shuffle
 model = X2CTMed3D().to(DEVICE)
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 loss_fn = torch.nn.BCEWithLogitsLoss()
+
+torch.optim.lr_scheduler.ReduceLROnPlateau()
 
 def train_one_epoch():
     model.train()
