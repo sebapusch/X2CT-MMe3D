@@ -37,14 +37,19 @@ class XRayDataset(Dataset):
 
         imgs = []
         for proj in ['Frontal', 'Lateral']:
-            projection = self.projections[(self.projections['uid'] == report['uid']) &
-                                   (self.projections['projection'] == proj)].iloc[0]
-            imgs.append(Image.open(os.path.join(self.xray_dir, projection['filename'])))
+            projection = self.projections[
+                (self.projections['uid'] == report['uid']) &
+                (self.projections['projection'] == proj)
+                ].iloc[0]
+
+            img = Image.open(os.path.join(self.xray_dir, projection['filename']))
+            imgs.append(self.preprocess(img))
 
         xrays = {
-            'frontal': self.preprocess(imgs[0]),
-            'lateral': self.preprocess(imgs[1])
+            'xrays': torch.stack(imgs, dim=1),
         }
+
+        print(xrays['xrays'].shape)
 
         return xrays, torch.tensor(report['disease'], dtype=torch.long)
 
@@ -73,7 +78,7 @@ class XRayCTDataset(XRayDataset):
                                    (self.projections['projection'] == 'Volume')].iloc[0]
 
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
-            volume = torch.tensor(np.array(volume['ct']))
+            volume = torch.tensor(np.array(volume['ct'])).unsqueeze(0)
             volume = self.ct_transform(volume)
             data['ct'] = volume.unsqueeze(0)
 
