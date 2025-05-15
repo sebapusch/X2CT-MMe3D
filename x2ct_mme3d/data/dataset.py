@@ -73,7 +73,7 @@ class XRayCTDataset(XRayDataset):
                                    (self.projections['projection'] == 'Volume')].iloc[0]
 
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
-            volume = np.array(volume['ct'])
+            volume = torch.tensor(np.array(volume['ct']))
             volume = self.ct_transform(volume)
             data['ct'] = volume.unsqueeze(0)
 
