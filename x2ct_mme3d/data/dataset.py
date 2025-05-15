@@ -1,10 +1,13 @@
 import os.path
+from abc import ABC, abstractmethod
 
 from PIL import Image
+from pandas import DataFrame
 from torch import Tensor
 from torchvision import transforms
 from torch.utils.data import Dataset
 import torch
+import torchio
 import pandas as pd
 import numpy as np
 import h5py as h5
@@ -13,14 +16,39 @@ import h5py as h5
 XRAY_TARGET_SIZE = (512, 512)
 
 
-class XRayDataset(Dataset):
+class BaseDataset(Dataset, ABC):
     def __init__(self,
                  reports_csv_path: str,
-                 projections_csv_path: str,
-                 xray_dir: str):
-        self.xray_dir = xray_dir
+                 projections_csv_path: str):
         self.reports = pd.read_csv(reports_csv_path)
         self.projections = pd.read_csv(projections_csv_path)
+
+    def __len__(self) -> int:
+        return len(self.reports)
+
+
+class CtDataset(BaseDataset):
+    def __init__(self, ct_dir: str, **kwargs):
+        self.ct_dir = ct_dir
+        super().__init__(**kwargs)
+
+    def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
+        report = self.reports.iloc[ix]
+        projection = self.projections[(self.projections['uid'] == report['uid']) &
+                                   (self.projections['projection'] == 'Volume')].iloc[0]
+
+        data = {'ct': None}
+        with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
+            data['ct'] = torch.tensor(np.array(volume['ct']))
+
+        return data, torch.tensor(report['disease'], dtype=torch.long)
+
+
+
+class XRayDataset(BaseDataset):
+    def __init__(self, xray_dir: str, **kwargs):
+        super().__init__(**kwargs)
+        self.xray_dir = xray_dir
         self.preprocess = transforms.Compose([
                 transforms.CenterCrop(2048),
                 transforms.Resize(XRAY_TARGET_SIZE),
@@ -31,42 +59,47 @@ class XRayDataset(Dataset):
     def __len__(self) -> int:
         return len(self.reports)
 
-    def __getitem__(self, ix: int) -> (dict[str, Tensor], bool):
+    def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         report = self.reports.iloc[ix]
 
         imgs = []
         for proj in ['Frontal', 'Lateral']:
-            projection = self.projections[(self.projections['uid'] == report['uid']) &
-                                   (self.projections['projection'] == proj)].iloc[0]
-            imgs.append(Image.open(os.path.join(self.xray_dir, projection['filename'])))
+            projection = self.projections[
+                (self.projections['uid'] == report['uid']) &
+                (self.projections['projection'] == proj)
+                ].iloc[0]
+
+            img = Image.open(os.path.join(self.xray_dir, projection['filename']))
+            imgs.append(self.preprocess(img))
 
         xrays = {
-            'frontal': self.preprocess(imgs[0]),
-            'lateral': self.preprocess(imgs[1])
+            'xrays': torch.stack(imgs, dim=0),
         }
 
-        return xrays, bool(report['disease'])
+        return xrays, torch.tensor(report['disease'], dtype=torch.long)
 
 
-class XRayCTDataset(XRayDataset):
+class X2CTDataset(XRayDataset, CtDataset):
     def __init__(self,
                  reports_csv_path: str,
                  projections_csv_path: str,
                  xray_dir: str,
                  ct_dir: str):
-        super().__init__(reports_csv_path, projections_csv_path, xray_dir)
-        self.ct_dir = ct_dir
+        super().__init__(
+            reports_csv_path=reports_csv_path,
+            projections_csv_path=projections_csv_path,
+            xray_dir=xray_dir,
+            ct_dir=ct_dir
+        )
 
+    def __getitem__(self, ix: int) -> (dict[str], Tensor):
+        xrays, _  = XRayDataset.__getitem__(self, ix)
+        ct, label = CtDataset.__getitem__(self, ix)
 
-    def __getitem__(self, ix: int) -> (dict[str, Tensor], bool):
-        data, label = super().__getitem__(ix)
+        out = {
+            'xrays': xrays,
+            'ct': ct,
+        }
 
-        report = self.reports.iloc[ix]
-        projection = self.projections[(self.projections['uid'] == report['uid']) &
-                                   (self.projections['projection'] == 'Volume')].iloc[0]
+        return out, label
 
-        with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
-            volume = np.array(volume['ct'])
-            data['ct'] = torch.tensor(volume, dtype=torch.float32).unsqueeze(0)
-
-        return data, label
