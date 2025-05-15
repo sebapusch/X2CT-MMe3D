@@ -37,13 +37,13 @@ class X2CTMed3D(nn.Module):
         super().__init__()
 
         self.backbone = Med3DBackbone()
-        self.classifier = self.classifier = nn.Sequential(
+        self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool3d(1),
             nn.Flatten(),
             nn.Linear(512, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(128, 2)
+            nn.Linear(128, 1)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

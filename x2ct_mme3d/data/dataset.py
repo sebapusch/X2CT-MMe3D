@@ -39,8 +39,7 @@ class CtDataset(BaseDataset):
 
         data = {'ct': None}
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
-            volume = torch.tensor(np.array(volume['ct'])).unsqueeze(0)
-            data['ct'] = volume.unsqueeze(0)
+            data['ct'] = torch.tensor(np.array(volume['ct']))
 
         return data, torch.tensor(report['disease'], dtype=torch.long)
 
@@ -74,7 +73,7 @@ class XRayDataset(BaseDataset):
             imgs.append(self.preprocess(img))
 
         xrays = {
-            'xrays': torch.stack(imgs, dim=1),
+            'xrays': torch.stack(imgs, dim=0),
         }
 
         return xrays, torch.tensor(report['disease'], dtype=torch.long)
@@ -94,12 +93,13 @@ class X2CTDataset(XRayDataset, CtDataset):
         )
 
     def __getitem__(self, ix: int) -> (dict[str], Tensor):
-        out = {}
         xrays, _  = XRayDataset.__getitem__(self, ix)
         ct, label = CtDataset.__getitem__(self, ix)
 
-        out['xrays'] = xrays['xrays']
-        out['ct'] = ct['xrays']
+        out = {
+            'xrays': xrays,
+            'ct': ct,
+        }
 
         return out, label
 

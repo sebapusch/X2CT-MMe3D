@@ -15,9 +15,9 @@ def main(args: argparse.Namespace):
         torchio.CropOrPad((64, 128, 128)),
     ])
 
-    dataset = CtDataset(args['ct_dir'],
-                        reports_csv_path=args['csv_reports_path'],
-                        projections_csv_path=args['csv_projections_path'])
+    dataset = CtDataset(args.ct_dir,
+                        reports_csv_path=args.csv_reports_path,
+                        projections_csv_path=args.csv_projections_path)
 
     for i in tqdm(range(len(dataset))):
         out = transform(dataset[i][0]['ct'])
@@ -26,9 +26,9 @@ def main(args: argparse.Namespace):
         projection = dataset.projections[(dataset.projections['uid'] == report['uid']) &
                                       (dataset.projections['projection'] == 'Volume')].iloc[0]
 
-        save(out, join(args['save_dir'], str(projection['filename'])))
+        save(out, join(args.save_dir, str(projection['filename'])))
 
-if __name__ == 'main':
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Preprocess CT')
     parser.add_argument('--save_dir', type=str, required=True)
     parser.add_argument('--ct_dir', type=str, required=True)
