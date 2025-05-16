@@ -26,8 +26,14 @@ class Med3DBackbone(nn.Module):
             model.layer4,
         )
 
+        self.flatten = nn.Sequential(
+            nn.AdaptiveAvgPool3d(1),
+            nn.Flatten(),
+        )
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
+        x = self.flatten(x)
 
         return x
 
