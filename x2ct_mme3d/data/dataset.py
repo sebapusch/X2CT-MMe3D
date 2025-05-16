@@ -1,13 +1,11 @@
 import os.path
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from PIL import Image
-from pandas import DataFrame
 from torch import Tensor
 from torchvision import transforms
 from torch.utils.data import Dataset
 import torch
-import torchio
 import pandas as pd
 import numpy as np
 import h5py as h5
@@ -92,7 +90,7 @@ class X2CTDataset(XRayDataset, CtDataset):
             ct_dir=ct_dir
         )
 
-    def __getitem__(self, ix: int) -> (dict[str], Tensor):
+    def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         xrays, _  = XRayDataset.__getitem__(self, ix)
         ct, label = CtDataset.__getitem__(self, ix)
 
