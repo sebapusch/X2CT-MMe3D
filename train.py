@@ -18,10 +18,10 @@ RANDOM_SEED = 55
 np.random.seed(RANDOM_SEED)
 random.seed(RANDOM_SEED)
 
-EPOCHS = 10
-BATCH_SIZE = 2
+EPOCHS = 30
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
-TEST_SIZE = 0.5
+TEST_SIZE = 0.1
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
@@ -40,8 +40,21 @@ def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
         random_state=42
     )
 
-    train_loader = DataLoader(Subset(dataset, train_ixs), batch_size=BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(Subset(dataset, val_ixs), batch_size=BATCH_SIZE, shuffle=False)
+    train_loader = DataLoader(
+        Subset(dataset, train_ixs),
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True
+    )
+
+    val_loader = DataLoader(
+        Subset(dataset, val_ixs),
+        batch_size=BATCH_SIZE,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True
+    )
 
     return train_loader, val_loader
 
@@ -103,7 +116,7 @@ def main(args: Namespace):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     wandb.init(project="x2ct-med3d",
-               name=f'run {timestamp}',
+               name=f'{timestamp}',
                config={
                     "epochs": EPOCHS,
                     "batch_size": BATCH_SIZE,
@@ -113,11 +126,13 @@ def main(args: Namespace):
     wandb.watch_called = False  # Avoid duplicate warnings
     wandb.watch(model, log="all", log_freq=100)
 
+    optimizer = torch.optim.AdamW(model.parameters(), LEARNING_RATE, weight_decay=1e-4)
+
     params = {
         'train': train,
         'val': val,
         'loss': torch.nn.BCEWithLogitsLoss(),
-        'optimizer': torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+        'optimizer': optimizer,
     }
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

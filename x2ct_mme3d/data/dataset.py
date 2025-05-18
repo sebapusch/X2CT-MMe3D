@@ -47,7 +47,7 @@ class XRayDataset(BaseDataset):
         super().__init__(**kwargs)
         self.xray_dir = xray_dir
         self.preprocess = transforms.Compose([
-                transforms.CenterCrop(2048),
+                # transforms.CenterCrop(2048),
                 transforms.Resize(XRAY_TARGET_SIZE),
                 transforms.Grayscale(),
                 transforms.ToTensor(),

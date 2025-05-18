@@ -3,16 +3,16 @@ import torch
 import torch.nn as nn
 from torch.nn import Linear
 
-from x2ct_mme3d.lib.resnet import resnet18, ResNet
+from x2ct_mme3d.lib.resnet import resnet18, ResNet, resnet34
 
 
 class Med3DBackbone(nn.Module):
     """
     Med3D Feature extractor based on resnet 18
     """
-    def __init__(self, pretrained: bool = False):
+    def __init__(self, arch: str = 'resnet18', pretrained: bool = False):
         super().__init__()
-        model = _load_med3d(pretrained)
+        model = _load_med3d(arch, pretrained)
 
         # only include backbone layers
         self.backbone = nn.Sequential(
@@ -59,21 +59,40 @@ class X2CTMed3D(nn.Module):
         return x
 
 
-def _load_med3d(pretrained: bool) -> ResNet:
-    model = resnet18(
-        sample_input_D=64,
-        sample_input_H=128,
-        sample_input_W=128,
-        num_seg_classes=1,
-        shortcut_type='A')
+def _load_med3d(arch: str, pretrained: bool) -> ResNet:
+    ckpt_path = ''
+    if arch == 'resnet18':
+
+        model = resnet18(
+            sample_input_D=64,
+            sample_input_H=128,
+            sample_input_W=128,
+            num_seg_classes=1,
+            shortcut_type='A')
+
+        if pretrained:
+            ckpt_path = hf_hub_download(
+                repo_id='TencentMedicalNet/MedicalNet-Resnet18',
+                filename='resnet_18_23dataset.pth',
+                cache_dir='models/checkpoints'
+            )
+    elif arch == 'resnet34':
+        model = resnet34(
+            sample_input_D=64,
+            sample_input_H=128,
+            sample_input_W=128,
+            num_seg_classes=1,
+            shortcut_type='A')
+
+        if pretrained:
+            ckpt_path = hf_hub_download(
+                repo_id='TencentMedicalNet/MedicalNet-Resnet34',
+                filename='resnet_34_23dataset.pth',
+                cache_dir='models/checkpoints'
+            )
+    else: raise ValueError(f'Unknown architecture {arch}')
 
     if pretrained:
-        ckpt_path = hf_hub_download(
-            repo_id='TencentMedicalNet/MedicalNet-Resnet18',
-            filename='resnet_18_23dataset.pth',
-            cache_dir='models/checkpoints'
-        )
-
         state = torch.load(ckpt_path)
         # keys are prefixed with `.module`
         state_dict = {k.replace('module.', ''): v for k, v in state['state_dict'].items()}
