@@ -36,7 +36,7 @@ class CtDataset(BaseDataset):
                                    (self.projections['projection'] == 'Volume')].iloc[0]
 
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
-            data = torch.tensor(np.array(volume['ct'])).unsqueeze(0)
+            data = torch.tensor(np.array(volume['ct']))
 
         return data, torch.tensor(report['disease'], dtype=torch.long)
 
