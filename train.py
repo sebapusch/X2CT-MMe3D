@@ -25,6 +25,7 @@ BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
 TEST_SIZE = 0.1
 PATIENCE = 4
+CHESTX_PATH = './models/checkpoints_/chexnet.pth.tar'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):

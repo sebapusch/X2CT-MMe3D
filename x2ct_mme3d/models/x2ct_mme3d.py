@@ -7,11 +7,11 @@ from torch import nn, Tensor
 
 
 class X2CTMMe3D(nn.Module):
-    def __init__(self):
+    def __init__(self, med3d: bool = False, chestx_path: str | None = None):
         super().__init__()
-        self.frontal_backbone = CheXNetBackbone()   # (Bx1x512x512  -> 1024)
-        self.lateral_backbone = CheXNetBackbone()   # (Bx1x512x512  -> 1024)
-        self.ct_backbone = Med3DBackbone()          # (Bx64x128x128 -> 512)
+        self.frontal_backbone = CheXNetBackbone(chestx_path)   # (Bx1x512x512  -> 1024)
+        self.lateral_backbone = CheXNetBackbone(chestx_path)   # (Bx1x512x512  -> 1024)
+        self.ct_backbone = Med3DBackbone('resnet18', med3d)          # (Bx64x128x128 -> 512)
         self.classifier = nn.Sequential(
             nn.Linear(512 + 1024 * 2, 128),
             nn.ReLU(),
