@@ -24,8 +24,6 @@ class X2CTMMe3D(nn.Module):
         back = self.lateral_backbone(x['lateral'])
         ct = self.ct_backbone(x['ct'])
 
-        print(front.shape)
-
         x = torch.cat((front, back, ct), dim=1)
         y = self.classifier(x)
 
