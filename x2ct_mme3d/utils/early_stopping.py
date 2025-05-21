@@ -24,7 +24,7 @@ class EarlyStopping:
             return False
 
         self.counter += 1
-        if self.counter > self.patience:
+        if self.counter >= self.patience:
             self.reset()
             return True
 
