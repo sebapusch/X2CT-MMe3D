@@ -4,7 +4,8 @@ from datetime import datetime
 
 import numpy as np
 import torch
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import (precision_score, recall_score,
+                             f1_score, roc_curve, auc)
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
@@ -12,6 +13,7 @@ import wandb
 
 from x2ct_mme3d.data.dataset import X2CTDataset
 from x2ct_mme3d.models.x2ct_mme3d import X2CTMMe3D
+from x2ct_mme3d.utils.early_stopping import EarlyStopping
 
 RANDOM_SEED = 55
 
@@ -22,6 +24,7 @@ EPOCHS = 30
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
 TEST_SIZE = 0.1
+PATIENCE = 4
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
@@ -75,38 +78,41 @@ def train_one_epoch(model: X2CTMMe3D, params: dict) -> float:
     return running_loss / len(params['train'])
 
 def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
-        model.eval()
-        total_loss = 0.0
+    model.eval()
+    total_loss = 0.0
 
-        all_preds = []
-        all_labels = []
+    all_preds = []
+    all_labels = []
 
-        with torch.no_grad():
-            for inputs, labels in params['val']:
-                inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
-                labels = labels.float().unsqueeze(1).to(DEVICE)
+    with torch.no_grad():
+        for inputs, labels in params['val']:
+            inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
+            labels = labels.float().unsqueeze(1).to(DEVICE)
 
-                outputs = model(inputs)
-                loss = params['loss'](outputs, labels)
-                total_loss += loss.item()
+            outputs = model(inputs)
+            loss = params['loss'](outputs, labels)
+            total_loss += loss.item()
 
-                probs = torch.sigmoid(outputs)
-                preds = (probs > 0.5).float()
+            probs = torch.sigmoid(outputs)
+            preds = (probs > 0.5).float()
 
-                all_preds.append(preds.cpu())
-                all_labels.append(labels.cpu())
+            all_preds.append(preds.cpu())
+            all_labels.append(labels.cpu())
 
-        avg_loss = total_loss / len(params['val'])
+    avg_loss = total_loss / len(params['val'])
 
-        preds_cat = torch.cat(all_preds).numpy()
-        labels_cat = torch.cat(all_labels).numpy()
+    preds_cat = torch.cat(all_preds).numpy()
+    labels_cat = torch.cat(all_labels).numpy()
 
-        metrics = {'accuracy': (preds_cat == labels_cat).mean(),
-                   'precision': precision_score(labels_cat, preds_cat, zero_division=0.0),
-                   'recall': recall_score(labels_cat, preds_cat, zero_division=0.0),
-                   'f1': f1_score(labels_cat, preds_cat, zero_division=0.0)}
+    fpr, tpr, _ = roc_curve(labels_cat, preds_cat, pos_label=2)
 
-        return avg_loss, metrics
+    metrics = {'accuracy': (preds_cat == labels_cat).mean(),
+               'precision': precision_score(labels_cat, preds_cat, zero_division=0.0),
+               'recall': recall_score(labels_cat, preds_cat, zero_division=0.0),
+               'f1': f1_score(labels_cat, preds_cat, zero_division=0.0),
+               'auc': auc(fpr, tpr)}
+
+    return avg_loss, metrics
 
 def main(args: Namespace):
     train, val = _load_dataset(args)
@@ -136,8 +142,11 @@ def main(args: Namespace):
         'optimizer': optimizer,
     }
 
+    early_stop = EarlyStopping(args.patience)
+
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     best_vloss = float('inf')
+    best_f1 = 0.0
 
     print('Training on device:', DEVICE)
 
@@ -160,11 +169,16 @@ def main(args: Namespace):
                 **{f'val_{metric}': value for metric, value in metrics.items() }
             })
 
-        if val_loss < best_vloss:
-            best_vloss = val_loss
-            model_path = f'models/med3d_model_{timestamp}_epoch{epoch}'
+        if val_loss < best_vloss or metrics['f1'] > best_f1:
+            best_vloss = min(val_loss, best_vloss)
+            best_f1 = max(best_f1, metrics['f1'])
+            model_path = f'models/{args.model_prefix}_{timestamp}_epoch{epoch}'
             torch.save(model.state_dict(), model_path)
             print(f"Saved new best model to {model_path}")
+
+        if early_stop(val_loss):
+            print(f'triggered early stop as validation loss has not been increasing for {args.patience + 1} epochs')
+            break
 
 
 if __name__ == '__main__':
@@ -177,6 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('--test-size', type=float, default=TEST_SIZE)
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
+    parser.add_argument('--patience', type=float, default=PATIENCE)
     # (--no-wandb to disable wandb logging)
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
     parser.add_argument('--model-prefix', type=str, default='x2ct')
