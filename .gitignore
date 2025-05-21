@@ -9,3 +9,5 @@ data/processed/xrays
 data/processed/volumes
 data/test
 models/checkpoints
+wandb
+logs

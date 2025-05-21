@@ -1,13 +1,11 @@
 import os.path
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from PIL import Image
-from pandas import DataFrame
 from torch import Tensor
 from torchvision import transforms
 from torch.utils.data import Dataset
 import torch
-import torchio
 import pandas as pd
 import numpy as np
 import h5py as h5
@@ -37,9 +35,8 @@ class CtDataset(BaseDataset):
         projection = self.projections[(self.projections['uid'] == report['uid']) &
                                    (self.projections['projection'] == 'Volume')].iloc[0]
 
-        data = {'ct': None}
         with h5.File(os.path.join(self.ct_dir, projection['filename']), 'r') as volume:
-            data['ct'] = torch.tensor(np.array(volume['ct']))
+            data = torch.tensor(np.array(volume['ct']))
 
         return data, torch.tensor(report['disease'], dtype=torch.long)
 
@@ -50,7 +47,7 @@ class XRayDataset(BaseDataset):
         super().__init__(**kwargs)
         self.xray_dir = xray_dir
         self.preprocess = transforms.Compose([
-                transforms.CenterCrop(2048),
+                # transforms.CenterCrop(2048),
                 transforms.Resize(XRAY_TARGET_SIZE),
                 transforms.Grayscale(),
                 transforms.ToTensor(),
@@ -62,7 +59,7 @@ class XRayDataset(BaseDataset):
     def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         report = self.reports.iloc[ix]
 
-        imgs = []
+        imgs = {}
         for proj in ['Frontal', 'Lateral']:
             projection = self.projections[
                 (self.projections['uid'] == report['uid']) &
@@ -70,13 +67,9 @@ class XRayDataset(BaseDataset):
                 ].iloc[0]
 
             img = Image.open(os.path.join(self.xray_dir, projection['filename']))
-            imgs.append(self.preprocess(img))
+            imgs[proj.lower()] = self.preprocess(img)
 
-        xrays = {
-            'xrays': torch.stack(imgs, dim=0),
-        }
-
-        return xrays, torch.tensor(report['disease'], dtype=torch.long)
+        return imgs, torch.tensor(report['disease'], dtype=torch.long)
 
 
 class X2CTDataset(XRayDataset, CtDataset):
@@ -92,14 +85,11 @@ class X2CTDataset(XRayDataset, CtDataset):
             ct_dir=ct_dir
         )
 
-    def __getitem__(self, ix: int) -> (dict[str], Tensor):
-        xrays, _  = XRayDataset.__getitem__(self, ix)
+    def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
+        data, _  = XRayDataset.__getitem__(self, ix)
         ct, label = CtDataset.__getitem__(self, ix)
 
-        out = {
-            'xrays': xrays,
-            'ct': ct,
-        }
+        data['ct'] = ct
 
-        return out, label
+        return data, label
 

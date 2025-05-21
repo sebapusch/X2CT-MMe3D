@@ -26,7 +26,7 @@ def main(args: argparse.Namespace):
         projection = dataset.projections[(dataset.projections['uid'] == report['uid']) &
                                       (dataset.projections['projection'] == 'Volume')].iloc[0]
 
-        save(out, join(args.save_dir, str(projection['filename'])))
+        save(out.cpu().numpy(), join(args.save_dir, str(projection['filename'])))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Preprocess CT')
