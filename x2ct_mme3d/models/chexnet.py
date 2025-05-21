@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from tensorflow import Tensor
 
 
 class CheXNetBackbone(nn.Module):
@@ -13,7 +12,7 @@ class CheXNetBackbone(nn.Module):
         super().__init__()
         self.backbone = _build_chexnet(1, weights_path)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.backbone(x)
 
 def _build_chexnet(input_channels: int, weights_path: str | None):
