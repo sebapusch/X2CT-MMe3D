@@ -67,7 +67,7 @@ class XRayDataset(BaseDataset):
                 ].iloc[0]
 
             img = Image.open(os.path.join(self.xray_dir, projection['filename']))
-            imgs[proj.lower()] = self.preprocess(img).squeeze()
+            imgs[proj.lower()] = self.preprocess(img)
 
         return imgs, torch.tensor(report['disease'], dtype=torch.long)
 
