@@ -1,5 +1,5 @@
 import random
-from argparse import Namespace, ArgumentParser
+from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from datetime import datetime
 
 import numpy as np
@@ -35,14 +35,14 @@ def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
     all_labels = np.array([dataset[i][1].item() for i in range(len(dataset))])
     train_ixs, val_ixs = train_test_split(
         range(len(dataset)),
-        test_size=TEST_SIZE,
+        test_size=args.test_size,
         stratify=all_labels,
         random_state=42
     )
 
     train_loader = DataLoader(
         Subset(dataset, train_ixs),
-        batch_size=BATCH_SIZE,
+        batch_size=args.batch_size,
         shuffle=True,
         num_workers=4,
         pin_memory=True
@@ -50,7 +50,7 @@ def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
 
     val_loader = DataLoader(
         Subset(dataset, val_ixs),
-        batch_size=BATCH_SIZE,
+        batch_size=args.batch_size,
         shuffle=False,
         num_workers=4,
         pin_memory=True
@@ -115,18 +115,19 @@ def main(args: Namespace):
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    wandb.init(project="x2ct-med3d",
-               name=f'{timestamp}',
-               config={
-                    "epochs": EPOCHS,
-                    "batch_size": BATCH_SIZE,
-                    "learning_rate": LEARNING_RATE,
-                    "architecture": "X2CTMMe3D"
-                })
-    wandb.watch_called = False  # Avoid duplicate warnings
-    wandb.watch(model, log="all", log_freq=100)
+    if args.wandb:
+        wandb.init(project="x2ct-med3d",
+                   name=f'{timestamp}',
+                   config={
+                        "epochs": EPOCHS,
+                        "batch_size": BATCH_SIZE,
+                        "learning_rate": LEARNING_RATE,
+                        "architecture": "X2CTMMe3D"
+                    })
+        wandb.watch_called = False  # Avoid duplicate warnings
+        wandb.watch(model, log="all", log_freq=100)
 
-    optimizer = torch.optim.AdamW(model.parameters(), LEARNING_RATE, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), args.lr, weight_decay=1e-4)
 
     params = {
         'train': train,
@@ -140,7 +141,7 @@ def main(args: Namespace):
 
     print('Training on device:', DEVICE)
 
-    for epoch in range(EPOCHS):
+    for epoch in range(args.epochs):
         print("-------------------")
         print(f"EPOCH {epoch + 1}:")
         print("-------------------")
@@ -151,12 +152,13 @@ def main(args: Namespace):
         print(f'LOSS train {train_loss:.4f} valid {val_loss:.4f}')
         print({f'{metric}: {value}' for metric, value in metrics.items() })
 
-        wandb.log({
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "val_loss": val_loss,
-            **{f'val_{metric}': value for metric, value in metrics.items() }
-        })
+        if args.wandb:
+            wandb.log({
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                **{f'val_{metric}': value for metric, value in metrics.items() }
+            })
 
         if val_loss < best_vloss:
             best_vloss = val_loss
@@ -172,4 +174,10 @@ if __name__ == '__main__':
     parser.add_argument('--projections', type=str, default='./data/processed/indiana_projections.csv')
     parser.add_argument('--xrays', type=str, required=True)
     parser.add_argument('--cts', type=str, required=True)
+    parser.add_argument('--batch-size', type=int, default=BATCH_SIZE)
+    parser.add_argument('--test-size', type=float, default=TEST_SIZE)
+    parser.add_argument('--epochs', type=int, default=EPOCHS)
+    parser.add_argument('--lr', type=float, default=LEARNING_RATE)
+    # (--no-wandb to disable wandb logging)
+    parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
     main(parser.parse_args())

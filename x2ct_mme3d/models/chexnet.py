@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from tensorflow import Tensor
+
 
 class CheXNetBackbone(nn.Module):
     """
@@ -9,10 +11,10 @@ class CheXNetBackbone(nn.Module):
 
     def __init__(self, weights_path: str | None = None):
         super().__init__()
-        self.model = _build_chexnet(2, weights_path)
+        self.backbone = _build_chexnet(1, weights_path)
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x: Tensor) -> Tensor:
+        return self.backbone(x)
 
 def _build_chexnet(input_channels: int, weights_path: str | None):
     """
@@ -26,6 +28,8 @@ def _build_chexnet(input_channels: int, weights_path: str | None):
         torch.nn.Module: Adapted DenseNet-121 model
     """
 
+    assert 1 <= input_channels <= 3, f'invalid number of input channels ({input_channels})'
+
     # 1. Load base model without ImageNet weights
     model = models.densenet121(weights=None)
 
@@ -33,9 +37,10 @@ def _build_chexnet(input_channels: int, weights_path: str | None):
     original_conv = model.features.conv0
     model.features.conv0 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
-    with torch.no_grad():
-        for i in range(input_channels):
-            model.features.conv0.weight[:, i:i+1] = original_conv.weight[:, 0:1]
+    if input_channels > 1:
+        with torch.no_grad():
+            for i in range(input_channels):
+                model.features.conv0.weight[:, i:i+1] = original_conv.weight[:, 0:1]
 
     # Remove classifier
     model.classifier = nn.Identity()

@@ -59,7 +59,7 @@ class XRayDataset(BaseDataset):
     def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         report = self.reports.iloc[ix]
 
-        imgs = []
+        imgs = {}
         for proj in ['Frontal', 'Lateral']:
             projection = self.projections[
                 (self.projections['uid'] == report['uid']) &
@@ -67,11 +67,9 @@ class XRayDataset(BaseDataset):
                 ].iloc[0]
 
             img = Image.open(os.path.join(self.xray_dir, projection['filename']))
-            imgs.append(self.preprocess(img))
+            imgs[proj.lower()] = self.preprocess(img).squeeze()
 
-        data = torch.stack(imgs, dim=1).squeeze()
-
-        return data, torch.tensor(report['disease'], dtype=torch.long)
+        return imgs, torch.tensor(report['disease'], dtype=torch.long)
 
 
 class X2CTDataset(XRayDataset, CtDataset):
@@ -88,13 +86,10 @@ class X2CTDataset(XRayDataset, CtDataset):
         )
 
     def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
-        xrays, _  = XRayDataset.__getitem__(self, ix)
+        data, _  = XRayDataset.__getitem__(self, ix)
         ct, label = CtDataset.__getitem__(self, ix)
 
-        out = {
-            'xrays': xrays,
-            'ct': ct,
-        }
+        data['ct'] = ct
 
-        return out, label
+        return data, label
 

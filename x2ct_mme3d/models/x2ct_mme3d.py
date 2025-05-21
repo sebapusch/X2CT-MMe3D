@@ -9,20 +9,24 @@ from torch import nn, Tensor
 class X2CTMMe3D(nn.Module):
     def __init__(self):
         super().__init__()
-        self.xray_backbone = CheXNetBackbone()
-        self.ct_backbone = Med3DBackbone()
+        self.frontal_backbone = CheXNetBackbone()   # (Bx1x512x512  -> 1024)
+        self.lateral_backbone = CheXNetBackbone()   # (Bx1x512x512  -> 1024)
+        self.ct_backbone = Med3DBackbone()          # (Bx64x128x128 -> 512)
         self.classifier = nn.Sequential(
-            nn.Linear(1536, 128),
+            nn.Linear(512 + 1024 * 2, 128),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.1),
             nn.Linear(128, 1)
         )
 
     def forward(self, x: dict[str, Tensor]) -> Tensor:
-        xray_features = self.xray_backbone(x['xrays'])
-        ct_features = self.ct_backbone(x['ct'])
+        front = self.frontal_backbone(x['frontal'])
+        back = self.lateral_backbone(x['lateral'])
+        ct = self.ct_backbone(x['ct'])
 
-        x = torch.cat((xray_features, ct_features), dim=1)
+        print(front.shape)
+
+        x = torch.cat((front, back, ct), dim=1)
         y = self.classifier(x)
 
         return y
