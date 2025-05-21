@@ -117,7 +117,7 @@ def main(args: Namespace):
 
     if args.wandb:
         wandb.init(project="x2ct-med3d",
-                   name=f'{timestamp}',
+                   name=f'{args.model_prefix}-{timestamp}',
                    config={
                         "epochs": EPOCHS,
                         "batch_size": BATCH_SIZE,
@@ -167,7 +167,6 @@ def main(args: Namespace):
             print(f"Saved new best model to {model_path}")
 
 
-
 if __name__ == '__main__':
     parser = ArgumentParser(description='Train CT')
     parser.add_argument('--reports', type=str, default='./data/processed/indiana_reports.sample.csv')
@@ -180,4 +179,5 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
     # (--no-wandb to disable wandb logging)
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
+    parser.add_argument('--model-prefix', type=str, default='x2ct')
     main(parser.parse_args())
