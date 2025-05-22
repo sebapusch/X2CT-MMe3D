@@ -30,12 +30,13 @@ class BiplanarCheXNet(nn.Module):
 
         return y
 
-class X2CTMMe3D(nn.Module):
+
+class X2CTMMed3D(nn.Module):
     """
     Classifier for biplanar x-rays and CT scans based on
     CheXNet + Med3D backbones
     """
-    def __init__(self, pretrained = False):
+    def __init__(self, pretrained: bool = False):
         super().__init__()
         self.frontal_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
         self.lateral_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
@@ -51,6 +52,21 @@ class X2CTMMe3D(nn.Module):
         y = self.classifier(x)
 
         return y
+
+
+class X2CTMed3D(nn.Module):
+    def __init__(self, pretrained: bool = False):
+        super().__init__()
+
+        self.backbone = Med3DBackbone('resnet34', pretrained)
+        self.classifier = _make_classifier(512)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.backbone(x)
+        x = self.classifier(x)
+
+        return x
+
 
 def _make_classifier(input_size: int) -> nn.Sequential:
     return nn.Sequential(

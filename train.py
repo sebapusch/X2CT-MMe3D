@@ -1,6 +1,7 @@
 import random
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from datetime import datetime
+from platform import architecture
 
 import numpy as np
 import torch
@@ -13,7 +14,7 @@ from tqdm import tqdm
 import wandb
 
 from x2ct_mme3d.data.dataset import X2CTDataset, XRayDataset
-from x2ct_mme3d.models.classifiers import X2CTMMe3D, BiplanarCheXNet
+from x2ct_mme3d.models.classifiers import X2CTMMed3D, BiplanarCheXNet
 from x2ct_mme3d.utils.early_stopping import EarlyStopping
 
 RANDOM_SEED = 55
@@ -129,7 +130,7 @@ def evaluate(model: nn.Module, params: dict) -> (float, dict):
 def _load_model(args: Namespace) -> nn.Module:
     if args.baseline_model:
         return BiplanarCheXNet(args.pretrained)
-    return X2CTMMe3D(args.pretrained)
+    return X2CTMMed3D(args.pretrained)
 
 def main(args: Namespace):
     train, val = _load_dataset(args)
@@ -139,13 +140,14 @@ def main(args: Namespace):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     if args.wandb:
+        arch = 'chexnet' if args.baseline else 'med3d+chexnet'
         wandb.init(project="x2ct-med3d",
-                   name=f'{args.model_prefix}-{timestamp}',
+                   name=f'{args.model_prefix}-{arch}-{timestamp}',
                    config={
-                        "epochs": EPOCHS,
-                        "batch_size": BATCH_SIZE,
-                        "learning_rate": LEARNING_RATE,
-                        "architecture": "X2CTMMe3D"
+                        'epochs': EPOCHS,
+                        'batch_size': BATCH_SIZE,
+                        'learning_rate': LEARNING_RATE,
+                        'architecture': arch
                     })
         wandb.watch_called = False  # Avoid duplicate warnings
         wandb.watch(model, log="all", log_freq=100)
