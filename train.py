@@ -13,7 +13,7 @@ from tqdm import tqdm
 import wandb
 
 from x2ct_mme3d.data.dataset import X2CTDataset, XRayDataset
-from x2ct_mme3d.models.x2ct_mme3d import X2CTMMe3D, ChestXNet
+from x2ct_mme3d.models.classifiers import X2CTMMe3D, BiplanarCheXNet
 from x2ct_mme3d.utils.early_stopping import EarlyStopping
 
 RANDOM_SEED = 55
@@ -70,7 +70,7 @@ def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
 
     return train_loader, val_loader
 
-def train_one_epoch(model: X2CTMMe3D, params: dict) -> float:
+def train_one_epoch(model: nn.Module, params: dict) -> float:
     model.train()
     running_loss = 0.0
 
@@ -86,7 +86,7 @@ def train_one_epoch(model: X2CTMMe3D, params: dict) -> float:
         running_loss += loss.item()
     return running_loss / len(params['train'])
 
-def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
+def evaluate(model: nn.Module, params: dict) -> (float, dict):
     model.eval()
     total_loss = 0.0
 
@@ -116,7 +116,7 @@ def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
     probs_cat = torch.cat(all_probs).numpy()
     labels_cat = torch.cat(all_labels).numpy()
 
-    fpr, tpr, _ = roc_curve(labels_cat, probs_cat, pos_label=2)
+    fpr, tpr, _ = roc_curve(labels_cat, probs_cat)
 
     metrics = {'accuracy': (preds_cat == labels_cat).mean(),
                'precision': precision_score(labels_cat, preds_cat, zero_division=0.0),
@@ -128,8 +128,8 @@ def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
 
 def _load_model(args: Namespace) -> nn.Module:
     if args.baseline_model:
-        return ChestXNet(CHESTX_PATH)
-    return X2CTMMe3D(True, CHESTX_PATH)
+        return BiplanarCheXNet(args.pretrained)
+    return X2CTMMe3D(args.pretrained)
 
 def main(args: Namespace):
     train, val = _load_dataset(args)
@@ -209,10 +209,11 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
     parser.add_argument('--patience', type=float, default=PATIENCE)
+    # (--no-pretrained to not initialize pretrained weights)
+    parser.add_argument('--pretrained', default=True, action=BooleanOptionalAction)
     # (--no-wandb to disable wandb logging)
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
     parser.add_argument('--baseline-model', default=False, action=BooleanOptionalAction)
     parser.add_argument('--model-prefix', type=str, default='x2ct')
 
-    print(parser.parse_args())
     main(parser.parse_args())

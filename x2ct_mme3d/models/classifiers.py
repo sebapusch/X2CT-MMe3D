@@ -1,3 +1,5 @@
+from os import path
+
 import torch
 
 from x2ct_mme3d.models.chexnet import CheXNetBackbone
@@ -5,11 +7,18 @@ from x2ct_mme3d.models.med3d import Med3DBackbone
 
 from torch import nn, Tensor
 
-class ChestXNet(nn.Module):
-    def __init__(self, chestx_path: str | None = None):
+
+CHEX_PATH = path.abspath(path.join('..', '..', 'models', 'checkpoints_', 'chexnet.pth.tar'))
+
+
+class BiplanarCheXNet(nn.Module):
+    """
+    Classifier for biplanar x-rays based on CheXNet backbones
+    """
+    def __init__(self, pretrained: bool = False):
         super().__init__()
-        self.frontal_backbone = CheXNetBackbone(chestx_path)   # (Bx1x512x512  -> 1024)
-        self.lateral_backbone = CheXNetBackbone(chestx_path)   # (Bx1x512x512  -> 1024)
+        self.frontal_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
+        self.lateral_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
         self.classifier = _make_classifier(1024 * 2)
 
     def forward(self, x: dict[str, Tensor]) -> Tensor:
@@ -22,11 +31,15 @@ class ChestXNet(nn.Module):
         return y
 
 class X2CTMMe3D(nn.Module):
-    def __init__(self, med3d: bool = False, chestx_path: str | None = None):
+    """
+    Classifier for biplanar x-rays and CT scans based on
+    CheXNet + Med3D backbones
+    """
+    def __init__(self, pretrained = False):
         super().__init__()
-        self.frontal_backbone = CheXNetBackbone(chestx_path)   # (Bx1x512x512  -> 1024)
-        self.lateral_backbone = CheXNetBackbone(chestx_path)   # (Bx1x512x512  -> 1024)
-        self.ct_backbone = Med3DBackbone('resnet18', med3d)          # (Bx64x128x128 -> 512)
+        self.frontal_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
+        self.lateral_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
+        self.ct_backbone = Med3DBackbone('resnet18', pretrained)
         self.classifier = _make_classifier(512 + 1024 * 2)
 
     def forward(self, x: dict[str, Tensor]) -> Tensor:
