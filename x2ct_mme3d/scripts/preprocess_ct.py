@@ -12,7 +12,7 @@ def main(args: argparse.Namespace):
         torchio.RescaleIntensity(out_min_max=(0, 1), percentiles=(0.5, 99.5)),
         torchio.ZNormalization(),
         torchio.Resample((1.0, 1.0, 1.0)),
-        torchio.CropOrPad((64, 128, 128)),
+        torchio.CropOrPad((128, 128, 128)),
     ])
 
     dataset = CtDataset(args.ct_dir,

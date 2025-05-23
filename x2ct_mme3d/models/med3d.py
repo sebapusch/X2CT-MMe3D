@@ -5,6 +5,7 @@ from torch.nn import Linear
 
 from x2ct_mme3d.lib.resnet import resnet18, ResNet, resnet34
 
+CT_DEPTH = 128
 
 class Med3DBackbone(nn.Module):
     """
@@ -45,7 +46,7 @@ def _load_med3d(arch: str, pretrained: bool) -> ResNet:
     if arch == 'resnet18':
 
         model = resnet18(
-            sample_input_D=64,
+            sample_input_D=CT_DEPTH,
             sample_input_H=128,
             sample_input_W=128,
             num_seg_classes=1,
@@ -59,7 +60,7 @@ def _load_med3d(arch: str, pretrained: bool) -> ResNet:
             )
     elif arch == 'resnet34':
         model = resnet34(
-            sample_input_D=64,
+            sample_input_D=CT_DEPTH,
             sample_input_H=128,
             sample_input_W=128,
             num_seg_classes=1,
