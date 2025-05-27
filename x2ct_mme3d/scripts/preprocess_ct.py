@@ -20,7 +20,7 @@ def main(args: argparse.Namespace):
                         projections_csv_path=args.csv_projections_path)
 
     for i in tqdm(range(len(dataset))):
-        out = transform(dataset[i][0]['ct'])
+        out = transform(dataset[i][0].unsqueeze(0))
 
         report = dataset.reports.iloc[i]
         projection = dataset.projections[(dataset.projections['uid'] == report['uid']) &
