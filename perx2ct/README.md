@@ -24,6 +24,26 @@ This repository provides a wrapper and CLI utility for generating synthetic 3D C
 
 ---
 
+## ⚙️ Setup (`scripts/setup.sh`)
+
+Before using the repository:
+
+```bash
+chmod +x scripts/setup.sh # Make executable
+./scripts/setup.sh        # Installs patches, configuration and checkpoint
+```
+
+Inside `PerX2CT` root, Create a conda environment, activate it, and install the required packages:
+```bash
+conda create -n perx2ct python=3.8
+conda activate perx2ct
+pip install --upgrade pip
+pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
+pip install -r requirement.txt
+```
+
+---
+
 ## 🔍 Inference Wrapper (`inference.py`)
 
 The `Inference` class handles PerX2CT loading and slice-wise reconstruction of 3D CT volumes from a pair of X-ray images.
@@ -83,26 +103,6 @@ Supports saving the output tensor as:
 - `.npy` (NumPy array)
 
 Default used in the script is `.h5`. To change this, modify the `CT_EXTENSION` variable in `generate_synthetic_volumes.py`.
-
----
-
-## ⚙️ Setup (`scripts/setup.sh`)
-
-Before using the repository:
-
-```bash
-chmod +x scripts/setup.sh # Make executable
-./scripts/setup.sh        # Installs patches, configuration and checkpoint
-```
-
-Inside `PerX2CT` root, Create a conda environment, activate it, and install the required packages:
-```bash
-conda create -n perx2ct python=3.8
-conda activate perx2ct
-pip install --upgrade pip
-pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
-pip install -r requirement.txt
-```
 
 ---
 
