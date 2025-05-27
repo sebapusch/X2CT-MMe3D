@@ -29,8 +29,9 @@ This repository provides a wrapper and CLI utility for generating synthetic 3D C
 Before using the repository:
 
 ```bash
-chmod +x scripts/setup.sh # Make executable
-./scripts/setup.sh        # Installs patches, configuration and checkpoint
+cd scripts
+chmod +x setup.sh # Make executable
+./setup.sh        # Installs patches, configuration and checkpoint
 ```
 
 Inside `PerX2CT` root, Create a conda environment, activate it, and install the required packages:
