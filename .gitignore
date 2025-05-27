@@ -11,3 +11,4 @@ data/test
 models/checkpoints
 wandb
 logs
+.venv/
