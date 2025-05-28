@@ -30,22 +30,40 @@ def preprocess(frontal: Image.Image, lateral: Image.Image):
     x = x.unsqueeze(0)  # Add batch dimension: [1, 2, 224, 224]
     return x
 
-async def predict(perx2ct_conn: Client,
-                  frontal: np.ndarray,
-                  lateral: np.ndarray):
-    images = np.concat((frontal, lateral), axis=0)
+def _send(conn: Client, data: np.ndarray):
     buf = io.BytesIO()
-    np.save(buf, images, allow_pickle=False)
-    perx2ct_conn.send(buf.getvalue())
+    np.save(buf, data, allow_pickle=False)
+    conn.send(buf.getvalue())
 
-    volume = perx2ct_conn.recv()
+def _receive(conn: Client) -> np.ndarray:
+    data = conn.recv()
+    return np.load(io.BytesIO(data))
+
+def predict(perx2ct_conn: Client,
+                  frontal: Image,
+                  lateral: Image):
+    _send(perx2ct_conn, np.array(frontal))
+    _send(perx2ct_conn, np.array(lateral))
+
+    volume = _receive(perx2ct_conn)
+    volume = torch.from_numpy(volume).unsqueeze(0)
+
     data = {
-        'frontal': xray_pre_pipe(frontal).to(DEVICE),
-        'lateral': xray_pre_pipe(lateral).to(DEVICE),
-        'ct': ct_pre_pipe(volume).to(DEVICE),
+        'frontal': xray_pre_pipe(frontal).unsqueeze(0).to(DEVICE),
+        'lateral': xray_pre_pipe(lateral).unsqueeze(0).to(DEVICE),
+        'ct': ct_pre_pipe(volume).unsqueeze(0).to(DEVICE),
     }
-    
-    out = model(data)
-    out = out.cpu().numpy()
-    
+
+    with torch.no_grad():
+        pred = model(data)
+
+    probs = torch.sigmoid(pred)
+
+    preds = (probs > 0.5).float()
+
+    out = {
+        'probability': float(probs[0][0]),
+        'prediction': float(preds[0][0]),
+    }
+
     return out
