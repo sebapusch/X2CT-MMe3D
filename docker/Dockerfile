@@ -28,12 +28,7 @@ COPY .. /app
 WORKDIR /app
 
 # Install pip dependencies
-RUN python3.10 -m pip install --break-system-packages -r requirements.txt \
-    && python3.10 -m pip install --break-system-packages \
-      torch==2.7.0+cpu \
-      torchvision==0.22.0+cpu \
-      -f https://download.pytorch.org/whl/torch_stable.html
-
+RUN python3.10 -m pip install --break-system-packages -r requirements.txt
 
 # Setup perx2ct
 RUN cd ./perx2ct/scripts \
