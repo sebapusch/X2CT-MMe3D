@@ -1,50 +1,42 @@
 FROM debian:bookworm
 
-# Install dependencies.
-RUN apt-get update
-RUN apt-get install  -y --no-install-recommends \
-    ca-certificates \
-    gnupg \
-    dirmngr \
-    curl \
-    git
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates git bzip2 wget \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get clean autoclean \
-  && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -f /var/cache/apt/archives/*.deb
+# Install Miniconda
+ENV CONDA_DIR=/opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    mkdir -p $CONDA_DIR && \
+    bash /tmp/miniconda.sh -b -u -p $CONDA_DIR && \
+    rm /tmp/miniconda.sh && \
+    conda init bash
 
-# Install python versions
-RUN uv python install 3.10 3.8
-
-# Link python versions
-RUN bash -c 'ln -s $(uv python find 3.10) /usr/local/bin/python3.10'
-RUN bash -c 'ln -s $(uv python find 3.8)  /usr/local/bin/python3.8'
-
+# Copy source
 COPY .. /app
 WORKDIR /app
 
-# Install pip dependencies
-RUN python3.10 -m pip install --break-system-packages -r requirements.txt
+# Create conda env for main app (Python 3.10)
+RUN conda create -y -n py310 python=3.10 && \
+    conda run -n py310 pip install -r requirements.txt
 
-# Setup perx2ct
-RUN cd ./perx2ct/scripts \
-    && chmod +x ./setup.sh \
-    && ./setup.sh
-
-# Install perx2ct dependencies
-RUN cd ./perx2ct/PerX2CT \
-    && python3.8 -m pip install --break-system-packages --upgrade pip \
-    && python3.8 -m pip install --break-system-packages \
+# Create perx2ct env with Python 3.8 and install dependencies
+RUN conda create -y -n perx2ct python=3.8 && \
+    conda run -n perx2ct pip install --upgrade pip && \
+    conda run -n perx2ct pip install \
       torch==1.8.1+cu111 \
       torchvision==0.9.1+cu111 \
-      torchaudio==0.8.1  \
-      -f https://download.pytorch.org/whl/torch_stable.html  \
-    && python3.8 install --break-system-packages -r requirement.txt
+      torchaudio==0.8.1 \
+      -f https://download.pytorch.org/whl/torch_stable.html && \
+    conda run -n perx2ct pip install -r /app/perx2ct/PerX2CT/requirement.txt
+
+# Run setup script (installs patches, config, checkpoint)
+RUN cd /app/scripts && chmod +x setup.sh && ./setup.sh
 
 WORKDIR /app/api
 
-CMD ["python3.10", "--python_path", "python3.8"]
+# Use Python 3.10 app, pass path to Python 3.8 env for listener
+CMD ["conda", "run", "-n", "py310", "python", "main.py", "--python_path", "/opt/conda/envs/perx2ct/bin/python"]
