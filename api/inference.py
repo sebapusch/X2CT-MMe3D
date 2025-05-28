@@ -1,55 +1,69 @@
+import io
+from multiprocessing.connection import Client
+from typing import Tuple
+
+import numpy as np
 import torch
-from torchvision import transforms
-# from models.chexnet_model import build_chexnet  # Uncomment and adjust to your repo!
 from PIL import Image
+from torchvision import transforms
+
 from x2ct_mme3d.data.preprocess import xray_pipeline, ct_pipeline
-from perx2ct.inference import Inference
-from io import BytesIO
 from x2ct_mme3d.models.x2ct_mme3d import X2CTMMe3D
 
-xray_pre_pipe = xray_pipeline()
-ct_pre_pipe = ct_pipeline()
 
-DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+class Inference:
+    def __init__(self, checkpoint_path: str, device: torch.device):
+        self.device = device
+        self.conn = None
+        self.model = self._load_model(checkpoint_path)
+        self.model.eval()
 
-ct_gen = Inference(
-    config_path='./perx2ct/configs/PerX2CT.yaml',
-    ckpt_path='./perx2ct/checkpoints/PerX2CT.ckpt',
-    dev=torch.device(DEVICE),
-    loader=True
-)
+        # Pipelines
+        self.xray_pre_pipe = xray_pipeline()
+        self.ct_pre_pipe = ct_pipeline()
 
-model = X2CTMMe3D()
-model.to(DEVICE)
+    def set_conn(self, conn: Client):
+        self.conn = conn
 
-# Define any preprocessing for your input images
-def preprocess(frontal: Image.Image, lateral: Image.Image):
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),   # Match your model input size
-        transforms.ToTensor(),
-    ])
-    frontal_tensor = transform(frontal)
-    lateral_tensor = transform(lateral)
-    # Stack along the channel dimension [2, 224, 224]
-    x = torch.cat([frontal_tensor, lateral_tensor], dim=0)
-    x = x.unsqueeze(0)  # Add batch dimension: [1, 2, 224, 224]
-    return x
+    def _load_model(self, checkpoint_path: str) -> X2CTMMe3D:
+        model = X2CTMMe3D()
+        state_dict = torch.load(checkpoint_path, map_location=self.device)
+        model.load_state_dict(state_dict)
+        model.to(self.device)
+        return model
 
-async def predict(frontal: Image.Image, lateral: Image.Image):
-    image_bytes =await frontal.read()
-    frontal = Image.open(BytesIO(image_bytes)).convert('RGB')
-    image_bytes = await lateral.read()
-    lateral = Image.open(BytesIO(image_bytes)).convert('RGB')
-    
-    ct_volume = ct_gen(frontal, lateral)
-    
-    data = {
-        'frontal': xray_pre_pipe(frontal).to(DEVICE),
-        'lateral': xray_pre_pipe(lateral).to(DEVICE),
-        'ct': ct_pre_pipe(ct_volume).to(DEVICE),
-    }
-    
-    out = model(data)
-    out = out.cpu().numpy()
-    
-    return out
+    def _send(self, data: np.ndarray):
+        buf = io.BytesIO()
+        np.save(buf, data, allow_pickle=False)
+        self.conn.send(buf.getvalue())
+
+    def _receive(self) -> np.ndarray:
+        data = self.conn.recv()
+        return np.load(io.BytesIO(data))
+
+    def __call__(self, frontal_img: Image.Image, lateral_img: Image.Image) -> dict:
+        # Send X-rays to PerX2CT process
+        self._send(np.array(frontal_img))
+        self._send(np.array(lateral_img))
+
+        # Receive reconstructed CT volume
+        volume_np = self._receive()
+        volume = torch.from_numpy(volume_np).unsqueeze(0)
+
+        # Preprocess all inputs
+        data = {
+            'frontal': self.xray_pre_pipe(frontal_img).unsqueeze(0).to(self.device),
+            'lateral': self.xray_pre_pipe(lateral_img).unsqueeze(0).to(self.device),
+            'ct': self.ct_pre_pipe(volume).unsqueeze(0).to(self.device),
+        }
+
+        with torch.no_grad():
+            pred = self.model(data)
+
+        probs = torch.sigmoid(pred)
+        preds = (probs > 0.5).float()
+
+        return {
+            'probability': float(probs[0][0]),
+            'prediction': float(preds[0][0]),
+        }
