@@ -7,7 +7,12 @@ RUN apt-get install  -y --no-install-recommends \
     gnupg \
     dirmngr \
     curl \
-    git
+    git \
+    build-essential \
+    cmake \
+    pkg-config \
+    libgl1 \
+    libglib2.0-0
 
 RUN apt-get clean autoclean \
   && apt-get autoremove -y \
@@ -28,7 +33,9 @@ COPY .. /app
 WORKDIR /app
 
 # Install pip dependencies
-RUN python3.10 -m pip install --break-system-packages -r requirements.txt
+RUN python3.10 -m pip install --break-system-packages --upgrade pip \
+    && python3.10 -m pip install --break-system-packages -r requirements.txt
+
 
 # Setup perx2ct
 RUN cd ./perx2ct/scripts \
@@ -38,13 +45,18 @@ RUN cd ./perx2ct/scripts \
 # Install perx2ct dependencies
 RUN cd ./perx2ct/PerX2CT \
     && python3.8 -m pip install --break-system-packages --upgrade pip \
+    && python3.8 -m pip install --break-system-packages numpy \
     && python3.8 -m pip install --break-system-packages \
-      torch==1.8.1+cu111 \
-      torchvision==0.9.1+cu111 \
-      torchaudio==0.8.1  \
-      -f https://download.pytorch.org/whl/torch_stable.html  \
-    && python3.8 install --break-system-packages -r requirement.txt
+      torch==2.0.0 \
+      torchvision==0.15.1 \
+      torchaudio==2.0.1 \
+    && python3.8 -m pip install --break-system-packages --no-deps elasticdeform \
+    && python3.8 -m pip install --break-system-packages -r requirement.txt
 
 WORKDIR /app/api
 
-CMD ["python3.10", "--python_path", "python3.8"]
+# ENV PYTHONPATH="/app"
+
+# python3.10 main.py --python_path python3.8docker run -it -p 8000:8000 med:latest sh
+
+CMD ["python3.10", "main.py", "--python_path", "python3.8"]
