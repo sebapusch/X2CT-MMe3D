@@ -64,6 +64,11 @@ def create_app(args: Namespace) -> FastAPI:
         frontal: UploadFile = File(...),
         lateral: UploadFile = File(...)
     ):
+        if not frontal.content_type.startswith("image/"):
+            raise HTTPException(status_code=422, detail="Invalid file type for frontal x-ray")
+        if not lateral.content_type.startswith("image/"):
+            raise HTTPException(status_code=422, detail="Invalid file type for lateral x-ray")
+
         frontal_img = Image.open(io.BytesIO(await frontal.read()))
         lateral_img = Image.open(io.BytesIO(await lateral.read()))
 
