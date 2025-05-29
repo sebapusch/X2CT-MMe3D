@@ -98,3 +98,9 @@ Once running, the API will be available at:
 ```
 http://localhost:8000
 ```
+
+The documentation will be available at:
+
+```
+http://localhost:8000/docs
+```
