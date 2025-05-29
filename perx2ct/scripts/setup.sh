@@ -36,7 +36,9 @@ cp "./$CONFIG_DIR/PerX2CT.yaml" "$TARGET_DIR/$CONFIG_DIR/PerX2CT.yaml"
 
 # Copy checkpoint
 echo "Copying checkpoint"
-mkdir "$TARGET_DIR/$CHECKPOINT_DIR"
+if [ ! -d "$TARGET_DIR/$CHECKPOINT_DIR" ]; then
+  mkdir "$TARGET_DIR/$CHECKPOINT_DIR"
+fi
 cp "./$CHECKPOINT_DIR/PerX2CT.ckpt" "$TARGET_DIR/$CHECKPOINT_DIR/PerX2CT.ckpt"
 
 echo "PerX2CT correctly set up at $TARGET_DIR"
