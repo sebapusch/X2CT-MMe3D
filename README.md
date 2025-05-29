@@ -22,10 +22,22 @@ X2CT-MMe3D/
 
 ## 📥 Prerequisites
 
-Before proceeding, ensure you have the necessary model files:
+Download the required model checkpoints from [this Google Drive folder](https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6?usp=sharing) and place them in the following locations:
 
-1. **Download the model checkpoint** from [this Google Drive folder](https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6?usp=sharing).
-2. **Place the downloaded checkpoint** in the `models/checkpoints/` directory.
+* `resnet18_20250523_084333_epoch13` → place inside `./models/checkpoints/`
+* `PerX2CT.ckpt` → place inside `./perx2ct/checkpoints/`
+
+Make sure the final structure looks like this:
+
+```
+models/
+└── checkpoints/
+    └── resnet18_20250523_084333_epoch13
+
+perx2ct/
+└── checkpoints/
+    └── PerX2CT.ckpt
+```
 
 ---
 
@@ -35,6 +47,11 @@ Before proceeding, ensure you have the necessary model files:
 
 ```bash
 docker build -f docker/Dockerfile -t med:latest .
+```
+
+If the build fails due to incompatible architectures, try;
+```bash
+docker build -f docker/Dockerfile.macos -t med:latest .
 ```
 
 ### 2. Run the Docker Container
