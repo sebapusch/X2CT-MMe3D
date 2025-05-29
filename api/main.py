@@ -5,18 +5,23 @@ import subprocess
 import time
 from argparse import Namespace
 from contextlib import asynccontextmanager
-from multiprocessing.connection import Client
 
 import torch
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from PIL import Image
 import io
 
+from pydantic import BaseModel
+
 from api.inference import Inference
 from api.perx2ct_client import PerX2CTClient
 
 LISTENER_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '..', 'perx2ct', 'PerX2CT', 'listener.py')
+
+class PredictResponse(BaseModel):
+    probability: float
+    prediction: str
 
 def _validate_image(img: Image.Image):
     if img.mode not in ['RGB', 'L']:
@@ -45,7 +50,10 @@ def create_app(args: Namespace) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan)
 
-    @app.post("/predict")
+    @app.post("/predict",
+              response_model=PredictResponse,
+              description="Returns the model prediction on the passed xray pairs, "
+                          "using synthetic generated ct scan information")
     async def predict_endpoint(
         frontal: UploadFile = File(...),
         lateral: UploadFile = File(...)

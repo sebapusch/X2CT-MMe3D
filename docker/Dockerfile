@@ -37,12 +37,12 @@ RUN conda run --no-capture-output -n perx2ct pip install -v --upgrade pip && \
     conda run --no-capture-output -n perx2ct pip install -v \
       torch==1.8.1+cpu torchvision==0.9.1+cpu torchaudio==0.8.1 \
       -f https://download.pytorch.org/whl/torch_stable.html && \
-    conda run --no-capture-output -n perx2ct pip install -v -r /app/perx2ct/PerX2CT/requirement.txt"
+    conda run --no-capture-output -n perx2ct pip install -v -r /app/perx2ct/PerX2CT/requirement.txt
 
 # Prepare app python env
 RUN conda create -y -n py310 python=3.10
 RUN conda run --no-capture-output -n py310 pip install -v --upgrade pip && \
-    conda run --no-capture-output -n py310 pip install -v -r /app/requirements.txt"
+    conda run --no-capture-output -n py310 pip install -v -r /app/requirements.txt
 
 # Set api workdir
 WORKDIR /app/api
