@@ -1,60 +1,75 @@
+import argparse
 import io
-from multiprocessing.connection import Listener
+import logging
+from multiprocessing.connection import Listener, Connection
 
 import numpy as np
 import torch
 
 from inference import Inference
 
-CHECKPOINT_PATH = '/home/sebastianp/code/uni/appliedml/X2CT-MMe3D/perx2ct/PerX2CT/checkpoints/PerX2CT.ckpt'
-CONFIG_PATH = '/home/sebastianp/code/uni/appliedml/X2CT-MMe3D/perx2ct/PerX2CT/configs/PerX2CT.yaml'
-CT_EXTENSION = 'h5'
 DEVICE = torch.device('cpu')
 
-def main():
-    listener = Listener(('localhost', 6000))
-    model = Inference(CONFIG_PATH, CHECKPOINT_PATH, DEVICE)
+class ArrayTransferConnection:
+    def __init__(self, conn: Connection):
+        self.conn = conn
 
-    conn = listener.accept()
+    def send(self, data: np.ndarray):
+        buf = io.BytesIO()
+        np.save(buf, data, allow_pickle=False)
+        self.conn.send(buf.getvalue())
 
-    print("Connected!", conn)
+    def receive(self) -> np.ndarray:
+        data = self.conn.recv()
+        return np.load(io.BytesIO(data), allow_pickle=False)
+
+    def error(self):
+        self.send(np.empty((0,)))
+
+    def close(self):
+        self.conn.close()
+
+
+def main(args: argparse.Namespace):
+    logging.info(f'Starting listener on port {args.port}...')
+    listener = Listener(('localhost', args.port))
+    model = Inference(args.config, args.checkpoint, DEVICE)
+
+    connection = ArrayTransferConnection(
+        listener.accept())
+    logging.info("Connected to client")
 
     while True:
         try:
-            data = conn.recv()
-        except EOFError:
-            print('Connection closed by server')
+            frontal = connection.receive()
+            lateral = connection.receive()
 
+            volume = model(frontal, lateral)
+
+            connection.send(volume.cpu().numpy())
+
+        except EOFError:
+            logging.info("Listener closed")
             break
 
+        except Exception as e:
+            logging.error(f'Unexpected error during inference: {e}')
+            connection.error()
             continue
 
-        if data is None:
-            break
-
-        data = conn.recv()
-        tensor = np.load(io.BytesIO(data))
-
-        print('process b receive', tensor)
-
-        result = tensor + 1
-
-        print('process b result', result)
-
-        buf = io.BytesIO()
-        np.save(buf, result)
-
-        continue
-
-        images = np.load(io.BytesIO(data))
-        volume = model(images[0], images[1])
-
-        buf = io.BytesIO()
-        np.save(buf, volume.cpu().numpy(), allow_pickle=False)
-
-        conn.send(buf.getvalue())
+    connection.close()
+    logging.info("Shut down listener")
 
 
+if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[perx2ct] [%(levelname)s] %(message)s",
+    )
 
+    parser = argparse.ArgumentParser(description="CT volume listener for PerX2CT")
+    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--port", type=int, default=6000)
 
-main()
+    main(parser.parse_args())

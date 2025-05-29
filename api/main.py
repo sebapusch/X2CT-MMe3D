@@ -1,58 +1,47 @@
 import argparse
+import logging
 import os.path
 import subprocess
 import time
+from argparse import Namespace
 from contextlib import asynccontextmanager
 from multiprocessing.connection import Client
 
 import torch
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from PIL import Image
 import io
 
 from api.inference import Inference
+from api.perx2ct_client import PerX2CTClient
 
 LISTENER_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '..', 'perx2ct', 'PerX2CT', 'listener.py')
 
-class ListenerManager:
-    def __init__(self, python_path: str, script_path: str, port: int = 6000):
-        self.python_path = python_path
-        self.script_path = script_path
-        self.port = port
-        self.process = None
-        self.client = None
-
-    def start(self):
-        print('[client] Starting listener subprocess...')
-        self.process = subprocess.Popen([self.python_path, self.script_path])
-        for _ in range(20):
-            try:
-                self.client = Client(('localhost', self.port))
-                print('[client] Connected to listener!')
-                return
-            except Exception:
-                time.sleep(0.2)
-        raise RuntimeError("Could not connect to listener")
-
-    def stop(self):
-        print("[client] Shutting down listener subprocess...")
-        if self.process:
-            self.process.terminate()
+def _validate_image(img: Image.Image):
+    if img.mode not in ['RGB', 'L']:
+        raise ValueError('Only rgb or grayscale images are supported.')
+    if img.size[0] < 512 or img.size[1] < 512:
+        raise ValueError(f'Image size must be at least 512x512, {img.size} given.')
 
 
-def create_app(checkpoint_path: str, python_path: str) -> FastAPI:
-    listener = ListenerManager(python_path, LISTENER_PATH)
+def create_app(args: Namespace) -> FastAPI:
+    perx2ct_client = PerX2CTClient(
+        args.perx2ct_python_path,
+        LISTENER_PATH,
+        args.perx2ct_model_path,
+        args.perx2ct_config_path,
+        args.perx2ct_port)
+
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    predict = Inference(checkpoint_path, device)
+    predict = Inference(perx2ct_client, args.checkpoint, device)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        listener.start()
-        predict.set_conn(listener.client)
+        perx2ct_client.start_process()
         yield
-        listener.stop()
+        perx2ct_client.stop_process()
 
     app = FastAPI(lifespan=lifespan)
 
@@ -61,9 +50,22 @@ def create_app(checkpoint_path: str, python_path: str) -> FastAPI:
         frontal: UploadFile = File(...),
         lateral: UploadFile = File(...)
     ):
-        frontal_img = Image.open(io.BytesIO(await frontal.read())).convert("L")
-        lateral_img = Image.open(io.BytesIO(await lateral.read())).convert("L")
-        return predict(frontal_img, lateral_img)
+        frontal_img = Image.open(io.BytesIO(await frontal.read()))
+        lateral_img = Image.open(io.BytesIO(await lateral.read()))
+
+        try:
+            _validate_image(frontal_img)
+            _validate_image(lateral_img)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        try:
+            out = predict(frontal_img, lateral_img)
+        except RuntimeError as e:
+            raise HTTPException(status_code=500,
+                                detail=f'Unexpected error encountered: {e}')
+
+        return out
 
     return app
 
@@ -71,15 +73,22 @@ def create_app(checkpoint_path: str, python_path: str) -> FastAPI:
 if __name__ == "__main__":
     import uvicorn
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[server] [%(levelname)s] %(message)s"
+    )
+
     parser = argparse.ArgumentParser(description="Run FastAPI with image prediction endpoint")
-    parser.add_argument('--checkpoint', type=str, default='../models/checkpoints/resnet18_20250523_084333_epoch13',
-                        help='Path to the model checkpoint')
-    parser.add_argument('--python_path', type=str, default='/home/sebastianp/Programs/miniconda3/envs/perx2ct/bin/python',
-                        help='Python executable path to run listener')
     parser.add_argument('--host', type=str, default='0.0.0.0', help='Host for FastAPI')
     parser.add_argument('--port', type=int, default=8000, help='Port for FastAPI')
+    parser.add_argument('--checkpoint', type=str, help='Path to the model checkpoint')
 
-    args = parser.parse_args()
+    parser.add_argument('--perx2ct_model_path', type=str, help='perx2ct model checkpoint path')
+    parser.add_argument('--perx2ct_python_path', type=str, help='Python executable path to run perx2ct listener')
+    parser.add_argument('--perx2ct_config_path', type=str, help='perx2ct configuration path')
+    parser.add_argument('--perx2ct_port', type=int, default=6000, help='perx2ct port')
 
-    app = create_app(args.checkpoint, args.python_path)
-    uvicorn.run(app, host=args.host, port=args.port)
+    args_ = parser.parse_args()
+
+    app_ = create_app(args_)
+    uvicorn.run(app_, host=args_.host, port=args_.port)

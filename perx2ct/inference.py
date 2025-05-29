@@ -24,7 +24,7 @@ class Inference:
         self._load_model(config_path, ckpt_path, dev)
         self._set_batch_presets(dev)
 
-    def __call__(self, path_frontal: str | np.ndarray, path_lateral: str | np.ndarray) -> Tensor:
+    def __call__(self, path_frontal, path_lateral) -> Tensor:
         if type(path_frontal) == str and not os.path.exists(path_frontal):
             raise ValueError(f'\'{path_frontal}\' does not exist')
 
@@ -72,7 +72,7 @@ class Inference:
                            ckpt_path=checkpoint_path)
                  .to(dev))
 
-    def _load_and_preprocess_xray(self, img: str | np.ndarray, cam_type: str, min_val=0, max_val=255) -> Tensor:
+    def _load_and_preprocess_xray(self, img, cam_type: str, min_val=0, max_val=255) -> Tensor:
         if type(img) == str:
             img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
 
