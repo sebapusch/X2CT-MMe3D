@@ -26,7 +26,7 @@ X2CT-MMe3D/
 
 Download the required model checkpoints from [this Google Drive folder](https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6?usp=sharing) and place them in the following locations:
 
-* `resnet18_20250523_084333_epoch13` → place inside `./models/checkpoints/`
+* `resnet18_20250523_084333_epoch13.ckpt` → place inside `./models/checkpoints/`
 * `PerX2CT.ckpt` → place inside `./perx2ct/checkpoints/`
 
 Make sure the final structure looks like this:
@@ -34,7 +34,7 @@ Make sure the final structure looks like this:
 ```
 models/
 └── checkpoints/
-    └── resnet18_20250523_084333_epoch13
+    └── resnet18_20250523_084333_epoch13.ckpt
 
 perx2ct/
 └── checkpoints/
@@ -102,7 +102,7 @@ Run the following command from the project root:
 ```bash
 python PYTHONPATH=. api/main.py \
   --port 8000 \
-  --checkpoint ./models/checkpoints/resnet18_20250523_084333_epoch13 \
+  --checkpoint ./models/checkpoints/resnet18_20250523_084333_epoch13.ckpt \
   --perx2ct_python_path <path_to_perx2ct_conda_python_executable> \
   --perx2ct_config_path ./perx2ct/PerX2CT/configs/PerX2CT.yaml \
   --perx2ct_model_path ./perx2ct/PerX2CT/checkpoints/PerX2CT.ckpt

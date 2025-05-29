@@ -8,8 +8,10 @@ samples
 data/processed/xrays
 data/processed/volumes
 data/test
-models/checkpoints
-perx2ct/checkpoints
+models/checkpoints/*
+!models/checkpoints/.gitkeep
+perx2ct/checkpoints/*
+!perx2ct/checkpoints/.gitkeep
 wandb
 logs
 .venv/
