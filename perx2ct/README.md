@@ -44,8 +44,6 @@ pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f htt
 pip install -r requirement.txt
 ```
 
-Here's an additional section you can append to the README under a new heading `## 📡 Inter-Process Listener (listener.py)`, written in the same style as the existing documentation:
-
 ---
 
 ## 📡 Inter-Process Listener (`listener.py`)
