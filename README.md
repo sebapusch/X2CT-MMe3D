@@ -2,6 +2,8 @@
 
 This guide provides step-by-step instructions to run the X2CT-MMe3D API, either via Docker or manually.
 
+> ⚠️ Note
+> Synthetic CT volume generation is currently limited to CPU inference only, due to implementation constraints within the PerX2CT model. GPU support is not available at this time.
 ---
 
 ## 📁 Relevant files structure
