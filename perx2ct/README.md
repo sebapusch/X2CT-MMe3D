@@ -16,6 +16,7 @@ This repository provides a wrapper and CLI utility for generating synthetic 3D C
 ├── generate_synthetic_volumes.py  # Script to create synthetic CTs
 ├── inference.py              # Inference wrapper class
 ├── save_to_volume.py         # Utilities to save CT volume in NIfTI/HDF5/NPY
+├── listener.py               # Listener for inter-process generation
 ├── scripts/
 │   ├── run_generate_dataset.slurm  # SLURM script for batch volume generation
 │   └── setup.sh              # Setup script for environment
@@ -41,6 +42,56 @@ conda activate perx2ct
 pip install --upgrade pip
 pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
 pip install -r requirement.txt
+```
+
+Here's an additional section you can append to the README under a new heading `## 📡 Inter-Process Listener (listener.py)`, written in the same style as the existing documentation:
+
+---
+
+## 📡 Inter-Process Listener (`listener.py`)
+
+This module provides a lightweight server for **inter-process communication (IPC)** to run PerX2CT inference via a socket-based interface. It receives X-ray image data as NumPy arrays, reconstructs a 3D CT volume using the `Inference` class, and sends the result back.
+
+### Key Features:
+
+* Socket-based array exchange using Python’s `multiprocessing.connection`
+* Handles paired frontal/lateral image tensors
+* Automatically shuts down on `EOFError`
+* Returns an empty array if inference fails
+
+### Usage
+
+Start the listener on a given port (default: `6000`):
+
+```bash
+python listener.py \
+  --checkpoint ./perx2ct/PerX2CT/checkpoints/PerX2CT.ckpt \
+  --config ./perx2ct/PerX2CT/configs/PerX2CT.yaml \
+  --port 6000
+```
+
+### Protocol
+
+1. The listener waits for a connection.
+2. It receives two NumPy arrays: the frontal and lateral projections.
+3. It reconstructs a volume using the `Inference` model.
+4. It sends back the result as a serialized NumPy array.
+
+### Example Client
+
+To interact with the listener, use the `ArrayTransferConnection` protocol:
+
+```python
+from multiprocessing.connection import Client
+from listener import ArrayTransferConnection
+
+conn = Client(('localhost', 6000))
+atc = ArrayTransferConnection(conn)
+
+atc.send(frontal_array)
+atc.send(lateral_array)
+
+volume = atc.receive()
 ```
 
 ---
