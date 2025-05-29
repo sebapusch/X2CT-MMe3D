@@ -58,7 +58,7 @@ cd perx2ct
 # Follow setup steps as per perx2ct/README.md
 ```
 
-### 1. Set Up the API Conda Environment
+### 2. Set Up the API Conda Environment
 
 Create a new Conda environment with Python 3.10:
 ```sh
@@ -68,7 +68,7 @@ conda activate med
 
 > Ensure you have Conda version 4.11 or higher to support Python 3.10.
 
-### 2. Install Project Dependencies
+### 3. Install Project Dependencies
 
 From the project root:
 
@@ -76,7 +76,7 @@ From the project root:
 pip install -r requirements.txt
 ```
 
-### 3. Start the API
+### 4. Start the API
 
 Run the following command from the project root:
 
