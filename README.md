@@ -81,7 +81,7 @@ pip install -r requirements.txt
 Run the following command from the project root:
 
 ```bash
-python api/main.py \
+python PYTHONPATH=. api/main.py \
   --port 8000 \
   --checkpoint ./models/checkpoints/resnet18_20250523_084333_epoch13 \
   --perx2ct_python_path <path_to_perx2ct_conda_python_executable> \
