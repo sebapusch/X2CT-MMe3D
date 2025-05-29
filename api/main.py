@@ -1,8 +1,6 @@
 import argparse
 import logging
 import os.path
-import subprocess
-import time
 from argparse import Namespace
 from contextlib import asynccontextmanager
 
@@ -19,9 +17,16 @@ from api.perx2ct_client import PerX2CTClient
 LISTENER_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '..', 'perx2ct', 'PerX2CT', 'listener.py')
 
+from enum import Enum
+
+class Diagnosis(str, Enum):
+    healthy = "healthy"
+    disease = "disease"
+
+
 class PredictResponse(BaseModel):
     probability: float
-    prediction: str
+    diagnosis: Diagnosis
 
 def _validate_image(img: Image.Image):
     if img.mode not in ['RGB', 'L']:
@@ -52,8 +57,9 @@ def create_app(args: Namespace) -> FastAPI:
 
     @app.post("/predict",
               response_model=PredictResponse,
-              description="Returns the model prediction on the passed xray pairs, "
-                          "using synthetic generated ct scan information")
+              description="Returns the model prediction on the passed uploaded xray pairs "
+                          "(frontal + lateral), using synthetic generated ct scan information",
+              )
     async def predict_endpoint(
         frontal: UploadFile = File(...),
         lateral: UploadFile = File(...)
@@ -65,7 +71,7 @@ def create_app(args: Namespace) -> FastAPI:
             _validate_image(frontal_img)
             _validate_image(lateral_img)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=422, detail=str(e))
 
         try:
             out = predict(frontal_img, lateral_img)

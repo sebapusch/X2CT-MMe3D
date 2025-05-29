@@ -59,5 +59,5 @@ class Inference:
 
         return {
             'probability': prob,
-            'prediction':  'healthy' if prob < self.threshold else 'disease',
+            'diagnosis':  'healthy' if prob < self.threshold else 'disease',
         }
