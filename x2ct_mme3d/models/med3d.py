@@ -5,12 +5,15 @@ from torch.nn import Linear
 
 from x2ct_mme3d.lib.resnet import resnet18, ResNet, resnet34
 
+CT_DEPTH = 128
 
 class Med3DBackbone(nn.Module):
     """
     Med3D Feature extractor based on resnet 18
     """
     def __init__(self, arch: str = 'resnet18', pretrained: bool = False):
+        assert arch in ['resnet18', 'resnet34'], f'Unexpected arhitecture {arch}'
+
         super().__init__()
         model = _load_med3d(arch, pretrained)
 
@@ -38,33 +41,12 @@ class Med3DBackbone(nn.Module):
         return x
 
 
-class X2CTMed3D(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        self.backbone = Med3DBackbone()
-        self.classifier = nn.Sequential(
-            nn.AdaptiveAvgPool3d(1),
-            nn.Flatten(),
-            nn.Linear(512, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 1)
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.backbone(x)
-        x = self.classifier(x)
-
-        return x
-
-
 def _load_med3d(arch: str, pretrained: bool) -> ResNet:
     ckpt_path = ''
     if arch == 'resnet18':
 
         model = resnet18(
-            sample_input_D=64,
+            sample_input_D=CT_DEPTH,
             sample_input_H=128,
             sample_input_W=128,
             num_seg_classes=1,
@@ -78,7 +60,7 @@ def _load_med3d(arch: str, pretrained: bool) -> ResNet:
             )
     elif arch == 'resnet34':
         model = resnet34(
-            sample_input_D=64,
+            sample_input_D=CT_DEPTH,
             sample_input_H=128,
             sample_input_W=128,
             num_seg_classes=1,

@@ -7,12 +7,13 @@ import torch
 from sklearn.metrics import (precision_score, recall_score,
                              f1_score, roc_curve, auc)
 from sklearn.model_selection import train_test_split
+from torch import nn
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import wandb
 
-from x2ct_mme3d.data.dataset import X2CTDataset
-from x2ct_mme3d.models.x2ct_mme3d import X2CTMMe3D
+from x2ct_mme3d.data.dataset import X2CTDataset, XRayDataset
+from x2ct_mme3d.models.classifiers import X2CTMMed3D, BiplanarCheXNet
 from x2ct_mme3d.utils.early_stopping import EarlyStopping
 
 RANDOM_SEED = 55
@@ -25,15 +26,23 @@ BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
 TEST_SIZE = 0.1
 PATIENCE = 4
+CHESTX_PATH = './models/checkpoints_/chexnet.pth.tar'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
-    dataset = X2CTDataset(
-        args.reports,
-        args.projections,
-        args.xrays,
-        args.cts,
-    )
+    if args.baseline_model:
+        dataset = XRayDataset(
+            reports_csv_path=args.reports,
+            projections_csv_path=args.projections,
+            xray_dir=args.xrays,
+        )
+    else:
+        dataset = X2CTDataset(
+            reports_csv_path=args.reports,
+            projections_csv_path=args.projections,
+            xray_dir=args.xrays,
+            ct_dir=args.cts,
+        )
 
     all_labels = np.array([dataset[i][1].item() for i in range(len(dataset))])
     train_ixs, val_ixs = train_test_split(
@@ -61,7 +70,7 @@ def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
 
     return train_loader, val_loader
 
-def train_one_epoch(model: X2CTMMe3D, params: dict) -> float:
+def train_one_epoch(model: nn.Module, params: dict) -> float:
     model.train()
     running_loss = 0.0
 
@@ -77,12 +86,13 @@ def train_one_epoch(model: X2CTMMe3D, params: dict) -> float:
         running_loss += loss.item()
     return running_loss / len(params['train'])
 
-def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
+def evaluate(model: nn.Module, params: dict) -> (float, dict):
     model.eval()
     total_loss = 0.0
 
     all_preds = []
     all_labels = []
+    all_probs = []
 
     with torch.no_grad():
         for inputs, labels in params['val']:
@@ -96,15 +106,17 @@ def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
             probs = torch.sigmoid(outputs)
             preds = (probs > 0.5).float()
 
+            all_probs.append(probs.cpu())
             all_preds.append(preds.cpu())
             all_labels.append(labels.cpu())
 
     avg_loss = total_loss / len(params['val'])
 
     preds_cat = torch.cat(all_preds).numpy()
+    probs_cat = torch.cat(all_probs).numpy()
     labels_cat = torch.cat(all_labels).numpy()
 
-    fpr, tpr, _ = roc_curve(labels_cat, preds_cat, pos_label=2)
+    fpr, tpr, _ = roc_curve(labels_cat, probs_cat)
 
     metrics = {'accuracy': (preds_cat == labels_cat).mean(),
                'precision': precision_score(labels_cat, preds_cat, zero_division=0.0),
@@ -114,21 +126,27 @@ def evaluate(model: X2CTMMe3D, params: dict) -> (float, dict):
 
     return avg_loss, metrics
 
+def _load_model(args: Namespace) -> nn.Module:
+    if args.baseline_model:
+        return BiplanarCheXNet(args.pretrained)
+    return X2CTMMed3D(args.pretrained)
+
 def main(args: Namespace):
     train, val = _load_dataset(args)
-    model = X2CTMMe3D()
+    model = _load_model(args)
     model.to(DEVICE)
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     if args.wandb:
+        arch = 'chexnet' if args.baseline_model else 'med3d+chexnet'
         wandb.init(project="x2ct-med3d",
-                   name=f'{args.model_prefix}-{timestamp}',
+                   name=f'{args.model_prefix}-{arch}-{timestamp}',
                    config={
-                        "epochs": EPOCHS,
-                        "batch_size": BATCH_SIZE,
-                        "learning_rate": LEARNING_RATE,
-                        "architecture": "X2CTMMe3D"
+                        'epochs': EPOCHS,
+                        'batch_size': BATCH_SIZE,
+                        'learning_rate': LEARNING_RATE,
+                        'architecture': arch
                     })
         wandb.watch_called = False  # Avoid duplicate warnings
         wandb.watch(model, log="all", log_freq=100)
@@ -192,7 +210,11 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
     parser.add_argument('--patience', type=float, default=PATIENCE)
+    # (--no-pretrained to not initialize pretrained weights)
+    parser.add_argument('--pretrained', default=True, action=BooleanOptionalAction)
     # (--no-wandb to disable wandb logging)
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
+    parser.add_argument('--baseline-model', default=False, action=BooleanOptionalAction)
     parser.add_argument('--model-prefix', type=str, default='x2ct')
+
     main(parser.parse_args())

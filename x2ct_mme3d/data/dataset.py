@@ -9,6 +9,7 @@ import torch
 import pandas as pd
 import numpy as np
 import h5py as h5
+from x2ct_mme3d.data.preprocess import xray_pipeline
 
 
 XRAY_TARGET_SIZE = (512, 512)
@@ -46,12 +47,8 @@ class XRayDataset(BaseDataset):
     def __init__(self, xray_dir: str, **kwargs):
         super().__init__(**kwargs)
         self.xray_dir = xray_dir
-        self.preprocess = transforms.Compose([
-                # transforms.CenterCrop(2048),
-                transforms.Resize(XRAY_TARGET_SIZE),
-                transforms.Grayscale(),
-                transforms.ToTensor(),
-            ])
+        self.preprocess = xray_pipeline()
+        
 
     def __len__(self) -> int:
         return len(self.reports)
