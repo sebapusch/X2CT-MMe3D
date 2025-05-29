@@ -24,9 +24,12 @@ class Inference:
         self._load_model(config_path, ckpt_path, dev)
         self._set_batch_presets(dev)
 
-    def __call__(self, path_frontal: str, path_lateral: str) -> Tensor:
-        if not os.path.exists(path_frontal): raise ValueError(f'\'{path_frontal}\' does not exist')
-        if not os.path.exists(path_lateral): raise ValueError(f'\'{path_lateral}\' does not exist')
+    def __call__(self, path_frontal, path_lateral) -> Tensor:
+        if type(path_frontal) == str and not os.path.exists(path_frontal):
+            raise ValueError(f'\'{path_frontal}\' does not exist')
+
+        if type(path_lateral) == str and not os.path.exists(path_lateral):
+            raise ValueError(f'\'{path_lateral}\' does not exist')
 
         batch = {k: self._batch_presets[k] for k in self._batch_presets}
         batch['PA'] = self._load_and_preprocess_xray(path_frontal, 'PA')
@@ -69,8 +72,9 @@ class Inference:
                            ckpt_path=checkpoint_path)
                  .to(dev))
 
-    def _load_and_preprocess_xray(self, path, cam_type, min_val=0, max_val=255) -> Tensor:
-        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    def _load_and_preprocess_xray(self, img, cam_type: str, min_val=0, max_val=255) -> Tensor:
+        if type(img) == str:
+            img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
 
         # Apply camera-dependent transformations
         if cam_type == "PA":

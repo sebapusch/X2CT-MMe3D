@@ -27,6 +27,7 @@ echo "Copying inference scripts"
 cp "inference.py" "$TARGET_DIR"
 cp "save_to_volume.py" "$TARGET_DIR"
 cp "generate_synthetic_volumes.py" "$TARGET_DIR"
+cp "listener.py" "$TARGET_DIR"
 
 
 # Copy config
