@@ -4,7 +4,7 @@ set -e
 cd /app/api
 
 echo '[entrypoint] Starting server...'
-conda run -n py310 python main.py \
+conda run --no-capture-output -n py310 python main.py \
   --port 8000 \
   --checkpoint  /app/models/checkpoints/resnet18_20250523_084333_epoch13 \
   --perx2ct_python_path /opt/conda/envs/perx2ct/bin/python \
