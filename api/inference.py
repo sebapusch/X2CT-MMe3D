@@ -1,15 +1,10 @@
-import io
-from multiprocessing.connection import Client
-from typing import Tuple
-
 import numpy as np
 import torch
 from PIL import Image
-from torchvision import transforms
 
 from api.perx2ct_client import PerX2CTClient
 from x2ct_mme3d.data.preprocess import xray_pipeline, ct_pipeline
-from x2ct_mme3d.models.x2ct_mme3d import X2CTMMe3D
+from x2ct_mme3d.models.classifiers import X2CTMMed3D
 
 class Inference:
     def __init__(self,
@@ -27,8 +22,8 @@ class Inference:
         self.xray_pre_pipe = xray_pipeline()
         self.ct_pre_pipe = ct_pipeline()
 
-    def _load_model(self, checkpoint_path: str) -> X2CTMMe3D:
-        model = X2CTMMe3D()
+    def _load_model(self, checkpoint_path: str) -> X2CTMMed3D:
+        model = X2CTMMed3D()
         state_dict = torch.load(checkpoint_path, map_location=self.device)
         model.load_state_dict(state_dict)
         model.to(self.device)

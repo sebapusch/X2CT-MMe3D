@@ -1,7 +1,6 @@
 import random
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from datetime import datetime
-from platform import architecture
 
 import numpy as np
 import torch
