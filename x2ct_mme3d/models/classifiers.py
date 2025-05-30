@@ -8,7 +8,7 @@ from x2ct_mme3d.models.med3d import Med3DBackbone
 from torch import nn, Tensor
 
 
-CHEX_PATH = path.abspath(path.join('..', '..', 'models', 'checkpoints_', 'chexnet.pth.tar'))
+CHEX_PATH = path.abspath(path.join('..', '..', 'models', 'checkpoints', 'chexnet.pth.tar'))
 
 
 class BiplanarCheXNet(nn.Module):
