@@ -1,7 +1,8 @@
 
 # 🧠 X2CT-MMe3D API Setup & Training Guide
 
-> **Note:** Synthetic CT volume generation at inference currently supports **CPU inference only** due to PerX2CT implementation constraints. GPU acceleration is not available yet.
+> [!NOTE]
+> Synthetic CT volume generation at inference currently supports **CPU inference only** due to PerX2CT implementation constraints. GPU acceleration is not available yet.
 
 ---
 
@@ -75,11 +76,8 @@ perx2ct/
 docker build -f docker/Dockerfile -t med:latest .
 ```
 
-> If building on macOS or if architecture errors occur, try:
-
-```bash
-docker build -f docker/Dockerfile.macos -t med:latest .
-```
+> [!TIP]
+> If building on macOS or if architecture errors occur, try building with the `Dockerfile.macos` file instead
 
 ### 2. Run the Docker Container
 
@@ -105,6 +103,7 @@ conda create -n med python=3.10 -y
 conda activate med
 ```
 
+> [!NOTE]
 > Ensure your Conda version is 4.11+ for Python 3.10 support.
 
 ### 3. Install Project Dependencies
