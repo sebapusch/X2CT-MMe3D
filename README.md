@@ -1,36 +1,59 @@
-# 🧠 X2CT-MMe3D API Setup Guide
 
-This guide provides step-by-step instructions to run the X2CT-MMe3D API, either via Docker or manually.
+# 🧠 X2CT-MMe3D API Setup & Training Guide
 
-> [\!WARNING]
-> Synthetic CT volume generation is currently limited to CPU inference only, due to implementation constraints within the PerX2CT model. GPU support is not available at this time.
+> **Note:** Synthetic CT volume generation at inference currently supports **CPU inference only** due to PerX2CT implementation constraints. GPU acceleration is not available yet.
 
------
+---
 
-## 📁 Relevant files structure
+## 📋 Table of Contents
+
+1. [Project Structure Overview](#project-structure-overview)
+2. [Prerequisites & Model Checkpoints](#prerequisites--model-checkpoints)
+3. [Running the API](#running-the-api)
+
+   * [Using Docker](#using-docker)
+   * [Manual Setup](#manual-setup)
+4. [Accessing the API](#accessing-the-api)
+5. [Dataset Preparation](#dataset-preparation)
+
+   * [Downloading the Dataset](#downloading-the-dataset)
+   * [Generating Train/Test Splits](#generating-train-test-splits)
+   * [Generating Synthetic CT Scans](#generating-synthetic-ct-scans)
+   * [Preprocessing Synthetic CTs](#preprocessing-synthetic-cts)
+6. [Model Training](#model-training)
+
+---
+
+## 📁 Project Structure Overview
 
 ```
 X2CT-MMe3D/
-├── api/                 # FastAPI-based REST API
-│   └── main.py          # API entry point
-├── docker/              # Docker-related files
-│   └── Dockerfile       # Dockerfile for building the image
-├── models/
-│   └── checkpoints/     # Directory for model checkpoints
-├── perx2ct/             # PerX2CT model and dependencies
-└── requirements.txt     # Python dependencies
+├── api/                      # FastAPI REST API code
+│   └── main.py               # API entry point
+├── data/                     # Dataset and processed data folders
+│   ├── processed/            # Processed CSV files and preprocessed data
+│   ├── raw/                  # Raw datasets and images
+│   └── synthetic_cts/        # Generated synthetic CT volumes
+├── docker/                   # Docker build files
+│   ├── Dockerfile            # Linux Dockerfile
+│   └── Dockerfile.macos      # macOS Dockerfile
+├── models/                   # Model checkpoints for X2CT-MMe3D
+│   └── checkpoints/
+├── perx2ct/                  # PerX2CT model code and dependencies
+├── scripts/                  # Utility and helper scripts
+│   ├── generate_csv.py       # Generate train/test splits CSV
+│   └── preprocess_ct.py      # Preprocess synthetic CTs
+├── requirements.txt          # Python dependencies
+└── train.py                  # Training script for X2CT-MMe3D
 ```
 
------
+---
 
-## 📥 Prerequisites
+## 📥 Prerequisites & Model Checkpoints
 
-Download the required model checkpoints from [this Google Drive folder](https://www.google.com/search?q=https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6%3Fusp%3Dsharing) and place them in the following locations:
+1. Download the required model checkpoints from [Google Drive](https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6?usp=sharing).
 
-  * `resnet18_20250523_084333_epoch13.ckpt` → place inside `./models/checkpoints/`
-  * `PerX2CT.ckpt` → place inside `./perx2ct/checkpoints/`
-
-Make sure the final structure looks like this:
+2. Place the files as follows:
 
 ```
 models/
@@ -42,53 +65,49 @@ perx2ct/
     └── PerX2CT.ckpt
 ```
 
------
+---
 
 ## 🐳 Running the API with Docker
 
-### 1\. Build the Docker Image
+### 1. Build the Docker Image
 
 ```bash
 docker build -f docker/Dockerfile -t med:latest .
 ```
 
-If the build fails due to incompatible architectures, try;
+> If building on macOS or if architecture errors occur, try:
 
 ```bash
 docker build -f docker/Dockerfile.macos -t med:latest .
 ```
 
-### 2\. Run the Docker Container
+### 2. Run the Docker Container
 
 ```bash
 docker run -p 8000:8000 med:latest
 ```
 
------
+---
 
 ## 🧪 Running the API Manually
 
-### 1\. Set Up PerX2CT Environment
-
-Navigate to the `perx2ct` directory and follow its setup instructions to install necessary dependencies.
+### 1. Set Up PerX2CT Environment
 
 ```bash
 cd perx2ct
-# Follow setup steps as per perx2ct/README.md
+# Follow instructions in perx2ct/README.md to install dependencies
 ```
 
-### 2\. Set Up the API Conda Environment
+### 2. Create and Activate the Conda Environment for API
 
-Create a new Conda environment with Python 3.10:
-
-```sh
+```bash
 conda create -n med python=3.10 -y
 conda activate med
 ```
 
-> Ensure you have Conda version 4.11 or higher to support Python 3.10.
+> Ensure your Conda version is 4.11+ for Python 3.10 support.
 
-### 3\. Install Project Dependencies
+### 3. Install Project Dependencies
 
 From the project root:
 
@@ -96,9 +115,7 @@ From the project root:
 pip install -r requirements.txt
 ```
 
-### 4\. Start the API
-
-Run the following command from the project root:
+### 4. Start the API Server
 
 ```bash
 python PYTHONPATH=. api/main.py \
@@ -109,33 +126,26 @@ python PYTHONPATH=. api/main.py \
   --perx2ct_model_path ./perx2ct/PerX2CT/checkpoints/PerX2CT.ckpt
 ```
 
------
+Replace `<path_to_perx2ct_conda_python_executable>` with the absolute path to the Python executable inside your PerX2CT conda environment.
 
-## ✅ API Access
+---
 
-Once running, the API will be available at:
+## ✅ Accessing the API
 
-```
-http://localhost:8000
-```
+* API Root URL:
+  `http://localhost:8000`
 
-The documentation will be available at:
+* Interactive API Documentation (Swagger UI):
+  `http://localhost:8000/docs`
 
-```
-http://localhost:8000/docs
-```
+---
 
------
+## 📊 Dataset Preparation
 
-## 📊 Recreating the Dataset and Training the Model
+### 1. Download the Dataset
 
-This section outlines the steps to recreate the dataset and train the X2CT-MMe3D model.
+Download the [Chest X-rays - Indiana University dataset](https://www.kaggle.com/datasets/raddar/chest-xrays-indiana-university) and place X-ray images in:
 
-### 1\. Download the Dataset
-
-Download and extract the [Chest X-rays - Indiana University dataset](https://www.kaggle.com/datasets/raddar/chest-xrays-indiana-university)
-
-The rest of the steps will assume the x-rays are placed under `data/raw/images`
 ```
 X2CT-MMe3D/
 ├── data/
@@ -144,27 +154,31 @@ X2CT-MMe3D/
 │   │   ├── indiana_projections.csv
 │   │   └── images/
 │   │       └── ... (x-ray images)
-├── ...
 ```
-### 2\. (Optional) Generate New Train/Test Split
 
-You can generate a new train/test split for the reports using the `generate_csv.py` script. If you skip this step, the existing `indiana_reports.csv` in `data/processed` will be used for training, along with `indiana_reports.train.csv` and `indiana_reports.test.csv` for the respective splits.
+---
 
-To run the script, navigate to the project root and execute:
+### 2. (Optional) Generate Train/Test Splits
+
+Run the CSV generator script from the project root to create new splits:
 
 ```bash
 python generate_csv.py
 ```
 
-This script will process the raw data and create `indiana_reports.csv`, `indiana_reports.train.csv`, and `indiana_reports.test.csv` in the `data/processed` directory.
+This creates:
 
-### 3\. Generate Synthetic CT Scans
+* `data/processed/indiana_reports.csv`
+* `data/processed/indiana_reports.train.csv`
+* `data/processed/indiana_reports.test.csv`
 
-Synthetic CT volumes are generated using the PerX2CT model. Follow the setup and inference instructions provided in the `perx2ct/README.md` file to set up the PerX2CT environment and generate the synthetic CT scans.
+If skipped, existing CSVs in `data/processed` will be used.
 
-Specifically, you will use the `generate_synthetic_volumes.py` script from the project root.
+---
 
-Example command:
+### 3. Generate Synthetic CT Scans
+
+Set up PerX2CT environment as per `perx2ct/README.md` and run:
 
 ```bash
 python generate_synthetic_volumes.py \
@@ -172,41 +186,29 @@ python generate_synthetic_volumes.py \
   --projection_dir ./data/raw/images \
   --csv_reports_path ./data/processed/indiana_reports.csv \
   --csv_projections_path ./data/processed/indiana_projections.csv \
-  --start_from 0 \
-  --end_at 100 # Adjust as needed
 ```
 
-  * `--save_dir`: Path to the directory where the generated synthetic CT volumes will be saved.
-  * `--projection_dir`: Path to the directory containing the original X-ray projection images.
-  * `--csv_reports_path`: Path to the CSV file containing the reports metadata.
-  * `--csv_projections_path`: Path to the CSV file containing the projections metadata.
-  * `--start_from`: (Optional) Starting index for processing reports.
-  * `--end_at`: (Optional) Ending index for processing reports.
+See `perx2ct/README.md` for more detailed instructions.
 
-### 4\. Preprocess CT Scans
+---
 
-After generating the synthetic CT scans, preprocess them using the `preprocess_ct.py` script. This step applies necessary transformations to the CT volumes.
+### 4. Preprocess Synthetic CT Scans
 
-Example command:
+Run preprocessing to prepare CT scans for training:
 
 ```bash
 python preprocess_ct.py \
   --save_dir ./data/processed_cts \
   --ct_dir ./data/synthetic_cts \
   --csv_reports_path ./data/processed/indiana_reports.csv \
-  --csv_projections_path ./data/synthetic_cts/projections_synth_[0-100].csv # Adjust path based on your synthetic CT output
+  --csv_projections_path ./data/synthetic_cts/projections_synth.csv
 ```
 
-  * `--save_dir`: Path to the directory where the preprocessed CT volumes will be saved.
-  * `--ct_dir`: Path to the directory containing the synthetic CT volumes generated in the previous step.
-  * `--csv_reports_path`: Path to the CSV file containing the reports metadata.
-  * `--csv_projections_path`: Path to the CSV file containing the projections metadata, including the paths to your generated synthetic CTs.
+---
 
-### 5\. Train the Model
+## 🚀 Model Training
 
-Finally, train the X2CT-MMe3D model using the `train.py` script.
-
-Example command:
+Train the X2CT-MMe3D model using the prepared data:
 
 ```bash
 python train.py \
@@ -224,15 +226,19 @@ python train.py \
   --model-prefix x2ct_mme3d_model
 ```
 
-  * `--reports`: Path to the CSV file containing the training reports (e.g., `indiana_reports.train.csv`).
-  * `--projections`: Path to the CSV file containing the projection metadata.
-  * `--xrays`: Path to the directory containing the X-ray images.
-  * `--cts`: Path to the directory containing the preprocessed CT volumes.
-  * `--batch-size`: Number of samples per batch.
-  * `--epochs`: Number of training epochs.
-  * `--lr`: Learning rate for the optimizer.
-  * `--patience`: Number of epochs to wait for improvement before early stopping.
-  * `--pretrained`: Use pre-trained weights for the model (default is `True`). Use `--no-pretrained` to disable.
-  * `--wandb`: Enable Weights & Biases logging (default is `True`). Use `--no-wandb` to disable.
-  * `--baseline-model`: Train the baseline BiplanarCheXNet model (default is `False`).
-  * `--model-prefix`: Prefix for saving the trained model checkpoint files.
+### Training Parameters
+
+| Argument           | Description                                                | Default / Notes    |
+| ------------------ | ---------------------------------------------------------- | ------------------ |
+| `--reports`        | Training reports CSV file                                  | Required           |
+| `--projections`    | Projections metadata CSV                                   | Required           |
+| `--xrays`          | Directory containing X-ray images                          | Required           |
+| `--cts`            | Directory containing preprocessed CT volumes               | Required           |
+| `--batch-size`     | Batch size for training                                    | 8                  |
+| `--epochs`         | Number of training epochs                                  | 30                 |
+| `--lr`             | Learning rate                                              | 0.001              |
+| `--patience`       | Early stopping patience (epochs)                           | 4                  |
+| `--pretrained`     | Use pretrained weights (toggle with `--no-pretrained`)     | True               |
+| `--wandb`          | Enable Weights & Biases logging (toggle with `--no-wandb`) | True               |
+| `--baseline-model` | Train baseline BiplanarCheXNet model                       | False              |
+| `--model-prefix`   | Prefix for saving model checkpoints                        | `x2ct_mme3d_model` |
