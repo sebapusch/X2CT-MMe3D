@@ -6,14 +6,11 @@ from tqdm import tqdm
 
 from perx2ct.save_to_volume import save
 from x2ct_mme3d.data.dataset import CtDataset
+from x2ct_mme3d.data.preprocess import ct_pipeline
+
 
 def main(args: argparse.Namespace):
-    transform = torchio.Compose([
-        torchio.RescaleIntensity(out_min_max=(0, 1), percentiles=(0.5, 99.5)),
-        torchio.ZNormalization(),
-        torchio.Resample((1.0, 1.0, 1.0)),
-        torchio.CropOrPad((128, 128, 128)),
-    ])
+    transform = ct_pipeline()
 
     dataset = CtDataset(args.ct_dir,
                         reports_csv_path=args.csv_reports_path,
