@@ -8,20 +8,20 @@
 
 ## 📋 Table of Contents
 
-1. [Project Structure Overview](#project-structure-overview)
-2. [Prerequisites & Model Checkpoints](#prerequisites--model-checkpoints)
-3. [Running the API](#running-the-api)
+1. [Project Structure Overview](#-project-structure-overview)
+2. [Prerequisites & Model Checkpoints](#-prerequisites--model-checkpoints)
+3. [Running the API](#-running-the-api)
 
-   * [Using Docker](#using-docker)
-   * [Manual Setup](#manual-setup)
-4. [Accessing the API](#accessing-the-api)
-5. [Dataset Preparation](#dataset-preparation)
+   * [Using Docker](#-using-docker)
+   * [Manual Setup](#-manual-setup)
+4. [Accessing the API](#-accessing-the-api)
+5. [Dataset Preparation](-#dataset-preparation)
 
-   * [Downloading the Dataset](#downloading-the-dataset)
-   * [Generating Train/Test Splits](#generating-train-test-splits)
-   * [Generating Synthetic CT Scans](#generating-synthetic-ct-scans)
-   * [Preprocessing Synthetic CTs](#preprocessing-synthetic-cts)
-6. [Model Training](#model-training)
+   * [Downloading the Dataset](#-downloading-the-dataset)
+   * [Generating Train/Test Splits](#-generating-train-test-splits)
+   * [Generating Synthetic CT Scans](#g-enerating-synthetic-ct-scans)
+   * [Preprocessing Synthetic CTs](#-preprocessing-synthetic-cts)
+6. [Model Training](#-model-training)
 
 ---
 
