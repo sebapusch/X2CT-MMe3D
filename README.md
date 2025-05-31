@@ -19,7 +19,7 @@
 
    * [Downloading the Dataset](#-downloading-the-dataset)
    * [Generating Train/Test Splits](#-generating-train-test-splits)
-   * [Generating Synthetic CT Scans](#g-enerating-synthetic-ct-scans)
+   * [Generating Synthetic CT Scans](#-generating-synthetic-ct-scans)
    * [Preprocessing Synthetic CTs](#-preprocessing-synthetic-cts)
 6. [Model Training](#-model-training)
 
