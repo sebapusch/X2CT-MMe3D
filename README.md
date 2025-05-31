@@ -10,13 +10,11 @@
 
 1. [Project Structure Overview](#-project-structure-overview)
 2. [Prerequisites & Model Checkpoints](#-prerequisites--model-checkpoints)
-3. [Running the API](#-running-the-api)
-
-   * [Using Docker](#-using-docker)
-   * [Manual Setup](#-manual-setup)
+3. Running the API
+   * [Using Docker](#-running-the-api-using-docker)
+   * [Manual Setup](#-running-the-api-manual-setup)
 4. [Accessing the API](#-accessing-the-api)
 5. [Dataset Preparation](-#dataset-preparation)
-
    * [Downloading the Dataset](#-downloading-the-dataset)
    * [Generating Train/Test Splits](#-generating-train-test-splits)
    * [Generating Synthetic CT Scans](#-generating-synthetic-ct-scans)
