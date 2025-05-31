@@ -11,7 +11,7 @@
 1. [Project Structure Overview](#-project-structure-overview)
 2. [Prerequisites & Model Checkpoints](#-prerequisites--model-checkpoints)
 3. [Running the API with Docker](#-running-the-api-with-docker)
-4  [Running the API manually](#-running-the-api-manually)
+4. [Running the API manually](#-running-the-api-manually)
 5. [Accessing the API](#-accessing-the-api)
 6. [Dataset Preparation](-#dataset-preparation)
    * [Downloading the Dataset](#-downloading-the-dataset)
