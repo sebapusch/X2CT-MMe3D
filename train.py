@@ -185,7 +185,7 @@ def main(args: Namespace):
 
         if args.wandb:
             wandb.log({
-                "epoch": epoch + 1,
+                "epoch": epoch,
                 "train_loss": train_loss,
                 "val_loss": val_loss,
                 **{f'val_{metric}': value for metric, value in metrics.items() }
