@@ -24,6 +24,7 @@ random.seed(RANDOM_SEED)
 EPOCHS = 30
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
+WEIGHT_DECAY = 1e-3
 TEST_SIZE = 0.1
 PATIENCE = 4
 CHESTX_PATH = './models/checkpoints_/chexnet.pth.tar'
@@ -151,7 +152,15 @@ def main(args: Namespace):
         wandb.watch_called = False  # Avoid duplicate warnings
         wandb.watch(model, log="all", log_freq=100)
 
-    optimizer = torch.optim.AdamW(model.parameters(), args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(),
+                                  lr=args.lr,
+                                  weight_decay=args.weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='max',
+        factor=0.1,
+        patience=args.patience // 2,
+    )
 
     params = {
         'train': train,
@@ -160,9 +169,8 @@ def main(args: Namespace):
         'optimizer': optimizer,
     }
 
-    early_stop = EarlyStopping(args.patience)
+    early_stop = EarlyStopping(args.patience, gt_is_better=True)
 
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     best_vloss = float('inf')
     best_f1 = 0.0
 
@@ -175,6 +183,8 @@ def main(args: Namespace):
 
         train_loss = train_one_epoch(model, params)
         val_loss, metrics = evaluate(model, params)
+
+        scheduler.step(metrics['f1'])
 
         print(f'LOSS train {train_loss:.4f} valid {val_loss:.4f}')
         print({f'{metric}: {value}' for metric, value in metrics.items() })
@@ -194,7 +204,7 @@ def main(args: Namespace):
             torch.save(model.state_dict(), model_path)
             print(f"Saved new best model to {model_path}")
 
-        if early_stop(val_loss):
+        if early_stop(metrics['f1']):
             print(f'triggered early stop as validation loss has not been increasing for {args.patience + 1} epochs')
             break
 
@@ -209,6 +219,7 @@ if __name__ == '__main__':
     parser.add_argument('--test-size', type=float, default=TEST_SIZE)
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
+    parser.add_argument('--weight-decay', type=float, default=WEIGHT_DECAY)
     parser.add_argument('--patience', type=float, default=PATIENCE)
     # (--no-pretrained to not initialize pretrained weights)
     parser.add_argument('--pretrained', default=True, action=BooleanOptionalAction)
