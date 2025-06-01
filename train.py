@@ -27,7 +27,6 @@ LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-3
 TEST_SIZE = 0.1
 PATIENCE = 4
-CHESTX_PATH = './models/checkpoints_/chexnet.pth.tar'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
@@ -143,12 +142,7 @@ def main(args: Namespace):
         arch = 'chexnet' if args.baseline_model else 'med3d+chexnet'
         wandb.init(project="x2ct-med3d",
                    name=f'{args.model_prefix}-{arch}-{timestamp}',
-                   config={
-                        'epochs': EPOCHS,
-                        'batch_size': BATCH_SIZE,
-                        'learning_rate': LEARNING_RATE,
-                        'architecture': arch
-                    })
+                   config=vars(args))
         wandb.watch_called = False  # Avoid duplicate warnings
         wandb.watch(model, log="all", log_freq=100)
 
