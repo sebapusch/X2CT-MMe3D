@@ -21,6 +21,9 @@ RANDOM_SEED = 55
 
 np.random.seed(RANDOM_SEED)
 random.seed(RANDOM_SEED)
+torch.manual_seed(RANDOM_SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(RANDOM_SEED)
 
 EPOCHS = 30
 BATCH_SIZE = 8
@@ -140,7 +143,7 @@ def main(args: Namespace):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     arch = 'baseline' if args.baseline else 'ct'
-    model_name = f'{args.mode_prefix}-{arch}-{timestamp}'
+    model_name = f'{args.model_prefix}-{arch}-{timestamp}'
 
     if args.wandb:
         wandb.init(project="x2ct",
