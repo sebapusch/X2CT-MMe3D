@@ -56,29 +56,33 @@ def main(args: Namespace):
     model = _load_model(args)
     dataset = _load_dataset(args)
 
-    results = {
-        'uids': [],
-        'true': [],
-        'pred': [],
-    }
+    uids = []
+    labels = []
+    predictions = []
 
     logging.info(f'Evaluating {len(dataset)} samples...')
     with torch.no_grad():
-        for inputs, labels in tqdm(dataset):
+        for batch in tqdm(dataset):
             inputs = {k: v.to(DEVICE) if k in ['ct', 'frontal', 'lateral'] else v
-                      for k, v in inputs.items()}
+                      for k, v in batch[0].items()}
 
-        output = model(inputs)
+            output = model(inputs)
 
-        results['uids'].extend(inputs['uid'])
-        results['true'].extend(labels.cpu().numpy())
-        results['pred'].extend(torch.sigmoid(output).cpu().numpy())
+            uids.extend(inputs['uid'].tolist())
+            labels.extend(batch[1].cpu().numpy().tolist())
+            predictions.extend(torch.sigmoid(output).cpu().numpy().tolist())
 
-    pd.DataFrame(results).to_csv(args.csv_out_path, index=False)
+    pd.DataFrame({
+        'uid': uids,
+        'label': labels,
+        'prediction': predictions,
+    }).to_csv(args.csv_out_path, index=False)
     logging.info(f'Stored results at \'{args.csv_out_path}\'')
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
     parser = ArgumentParser()
     parser.add_argument('--checkpoint', type=str, required=True)
     parser.add_argument('--reports', type=str, required=True)
