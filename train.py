@@ -1,3 +1,4 @@
+import os.path
 import random
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from datetime import datetime
@@ -30,7 +31,7 @@ PATIENCE = 4
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
-    if args.baseline_model:
+    if args.baseline:
         dataset = XRayDataset(
             reports_csv_path=args.reports,
             projections_csv_path=args.projections,
@@ -127,7 +128,7 @@ def evaluate(model: nn.Module, params: dict) -> (float, dict):
     return avg_loss, metrics
 
 def _load_model(args: Namespace) -> nn.Module:
-    if args.baseline_model:
+    if args.baseline:
         return BiplanarCheXNet(args.pretrained)
     return X2CTMMed3D(args.pretrained)
 
@@ -138,10 +139,13 @@ def main(args: Namespace):
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+    arch = 'baseline' if args.baseline else 'ct'
+    model_name = f'{args.mode_prefix}-{arch}-{timestamp}'
+
     if args.wandb:
-        arch = 'chexnet' if args.baseline_model else 'med3d+chexnet'
-        wandb.init(project="x2ct-med3d",
-                   name=f'{args.model_prefix}-{arch}-{timestamp}',
+        arch = 'chexnet' if args.baseline else 'med3d+chexnet'
+        wandb.init(project="x2ct",
+                   name=model_name,
                    config=vars(args))
         wandb.watch_called = False  # Avoid duplicate warnings
         wandb.watch(model, log="all", log_freq=100)
@@ -163,7 +167,7 @@ def main(args: Namespace):
         'optimizer': optimizer,
     }
 
-    early_stop = EarlyStopping(args.patience, gt_is_better=True)
+    early_stop = EarlyStopping(args.patience)
 
     best_vloss = float('inf')
     best_f1 = 0.0
@@ -172,7 +176,7 @@ def main(args: Namespace):
 
     for epoch in range(args.epochs):
         print("-------------------")
-        print(f"EPOCH {epoch + 1}:")
+        print(f"EPOCH {epoch}:")
         print("-------------------")
 
         train_loss = train_one_epoch(model, params)
@@ -194,11 +198,11 @@ def main(args: Namespace):
         if val_loss < best_vloss or metrics['f1'] > best_f1:
             best_vloss = min(val_loss, best_vloss)
             best_f1 = max(best_f1, metrics['f1'])
-            model_path = f'models/{args.model_prefix}_{timestamp}_epoch{epoch}'
+            model_path = os.path.join(args.model_dir, model_name)
             torch.save(model.state_dict(), model_path)
             print(f"Saved new best model to {model_path}")
 
-        if early_stop(metrics['f1']):
+        if early_stop(val_loss):
             print(f'triggered early stop as validation loss has not been increasing for {args.patience + 1} epochs')
             break
 
@@ -209,6 +213,7 @@ if __name__ == '__main__':
     parser.add_argument('--projections', type=str, default='./data/processed/indiana_projections.csv')
     parser.add_argument('--xrays', type=str, required=True)
     parser.add_argument('--cts', type=str, required=True)
+    parser.add_argument('--model-dir', type=str, required=True)
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE)
     parser.add_argument('--test-size', type=float, default=TEST_SIZE)
     parser.add_argument('--epochs', type=int, default=EPOCHS)
