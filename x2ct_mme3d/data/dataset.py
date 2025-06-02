@@ -18,9 +18,11 @@ XRAY_TARGET_SIZE = (512, 512)
 class BaseDataset(Dataset, ABC):
     def __init__(self,
                  reports_csv_path: str,
-                 projections_csv_path: str):
+                 projections_csv_path: str,
+                 include_uid: bool = False):
         self.reports = pd.read_csv(reports_csv_path)
         self.projections = pd.read_csv(projections_csv_path)
+        self.include_uid = include_uid
 
     def __len__(self) -> int:
         return len(self.reports)
@@ -56,7 +58,7 @@ class XRayDataset(BaseDataset):
     def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):
         report = self.reports.iloc[ix]
 
-        imgs = {}
+        data = {}
         for proj in ['Frontal', 'Lateral']:
             projection = self.projections[
                 (self.projections['uid'] == report['uid']) &
@@ -64,9 +66,12 @@ class XRayDataset(BaseDataset):
                 ].iloc[0]
 
             img = Image.open(os.path.join(self.xray_dir, projection['filename']))
-            imgs[proj.lower()] = self.preprocess(img)
+            data[proj.lower()] = self.preprocess(img)
 
-        return imgs, torch.tensor(report['disease'], dtype=torch.long)
+        if self.include_uid:
+            data['uid'] = report['uid']
+
+        return data, torch.tensor(report['disease'], dtype=torch.long)
 
 
 class X2CTDataset(XRayDataset, CtDataset):
@@ -87,6 +92,8 @@ class X2CTDataset(XRayDataset, CtDataset):
         ct, label = CtDataset.__getitem__(self, ix)
 
         data['ct'] = ct
+        if self.include_uid:
+            data['uid'] = label
 
         return data, label
 
