@@ -50,7 +50,7 @@ def main(args: Namespace):
     assert path.exists(args.checkpoint)
     assert path.exists(args.reports)
     assert path.exists(args.projections)
-    assert path.exists(path.dirname(args.out_dir))
+    assert path.exists(path.dirname(args.csv_out_path))
 
     model = _load_model(args)
     dataset = _load_dataset(args)
@@ -72,8 +72,8 @@ def main(args: Namespace):
         results['true'].extend(labels.cpu().numpy())
         results['pred'].extend(torch.sigmoid(output))
 
-    pd.DataFrame(results).to_csv(args.csv_output_path, index=False)
-    logging.info(f'Stored results at \'{args.csv_output_path}\'')
+    pd.DataFrame(results).to_csv(args.csv_out_path, index=False)
+    logging.info(f'Stored results at \'{args.csv_out_path}\'')
 
 
 if __name__ == '__main__':
