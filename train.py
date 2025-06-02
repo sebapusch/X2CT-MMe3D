@@ -183,7 +183,7 @@ def main(args: Namespace):
         train_loss = train_one_epoch(model, params)
         val_loss, metrics = evaluate(model, params)
 
-        scheduler.step(metrics['f1'])
+        scheduler.step(val_loss)
 
         print(f'LOSS train {train_loss:.4f} valid {val_loss:.4f}')
         print({f'{metric}: {value}' for metric, value in metrics.items() })
