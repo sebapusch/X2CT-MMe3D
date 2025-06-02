@@ -34,6 +34,7 @@ def _load_dataset(args: Namespace) -> DataLoader:
         'reports_csv_path': args.reports,
         'projections_csv_path': args.projections,
         'xray_dir': args.xray_dir,
+        'include_uid': True,
     }
     if args.baseline:
         dataset = XRayDataset(**init)
