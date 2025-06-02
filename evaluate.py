@@ -68,7 +68,7 @@ def main(args: Namespace):
 
         output = model(inputs)
 
-        results['uids'].extend(inputs['uids'])
+        results['uids'].extend(inputs['uid'])
         results['true'].extend(labels.cpu().numpy())
         results['pred'].extend(torch.sigmoid(output))
 
