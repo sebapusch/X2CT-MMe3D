@@ -143,7 +143,6 @@ def main(args: Namespace):
     model_name = f'{args.mode_prefix}-{arch}-{timestamp}'
 
     if args.wandb:
-        arch = 'chexnet' if args.baseline else 'med3d+chexnet'
         wandb.init(project="x2ct",
                    name=model_name,
                    config=vars(args))
