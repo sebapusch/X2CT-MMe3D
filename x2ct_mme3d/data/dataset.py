@@ -79,12 +79,14 @@ class X2CTDataset(XRayDataset, CtDataset):
                  reports_csv_path: str,
                  projections_csv_path: str,
                  xray_dir: str,
-                 ct_dir: str):
+                 ct_dir: str,
+                 include_uid: bool = False):
         super().__init__(
             reports_csv_path=reports_csv_path,
             projections_csv_path=projections_csv_path,
             xray_dir=xray_dir,
-            ct_dir=ct_dir
+            ct_dir=ct_dir,
+            include_uid=include_uid
         )
 
     def __getitem__(self, ix: int) -> (dict[str, Tensor], Tensor):

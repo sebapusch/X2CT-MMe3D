@@ -33,8 +33,8 @@ def _load_dataset(args: Namespace) -> DataLoader:
     init = {
         'reports_csv_path': args.reports,
         'projections_csv_path': args.projections,
-        'xray_dir': args.xray_dir,
         'include_uid': True,
+        'xray_dir': args.xray_dir,
     }
     if args.baseline:
         dataset = XRayDataset(**init)
@@ -65,13 +65,14 @@ def main(args: Namespace):
     logging.info(f'Evaluating {len(dataset)} samples...')
     with torch.no_grad():
         for inputs, labels in tqdm(dataset):
-            inputs = {k: inputs[k].to(DEVICE) for k in ['ct', 'frontal', 'lateral']}
+            inputs = {k: v.to(DEVICE) if k in ['ct', 'frontal', 'lateral'] else v
+                      for k, v in inputs.items()}
 
         output = model(inputs)
 
         results['uids'].extend(inputs['uid'])
         results['true'].extend(labels.cpu().numpy())
-        results['pred'].extend(torch.sigmoid(output))
+        results['pred'].extend(torch.sigmoid(output).cpu().numpy())
 
     pd.DataFrame(results).to_csv(args.csv_out_path, index=False)
     logging.info(f'Stored results at \'{args.csv_out_path}\'')
