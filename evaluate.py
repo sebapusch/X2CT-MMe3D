@@ -64,7 +64,7 @@ def main(args: Namespace):
     logging.info(f'Evaluating {len(dataset)} samples...')
     with torch.no_grad():
         for inputs, labels in tqdm(dataset):
-            inputs = {k: v.to(DEVICE) for k, v in ['ct', 'frontal', 'lateral']}
+            inputs = {k: inputs[k].to(DEVICE) for k in ['ct', 'frontal', 'lateral']}
 
         output = model(inputs)
 
