@@ -221,7 +221,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained', default=True, action=BooleanOptionalAction)
     # (--no-wandb to disable wandb logging)
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
-    parser.add_argument('--baseline-model', default=False, action=BooleanOptionalAction)
+    parser.add_argument('--baseline', default=False, action=BooleanOptionalAction)
     parser.add_argument('--model-prefix', type=str, default='x2ct')
 
     main(parser.parse_args())
