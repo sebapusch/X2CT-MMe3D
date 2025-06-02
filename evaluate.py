@@ -1,3 +1,4 @@
+import logging
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from os import path
 
@@ -5,6 +6,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 import pandas as pd
+from tqdm import tqdm
 
 from x2ct_mme3d.data.dataset import XRayDataset, X2CTDataset
 from x2ct_mme3d.models.classifiers import BiplanarCheXNet, X2CTMMed3D
@@ -59,8 +61,9 @@ def main(args: Namespace):
         'pred': [],
     }
 
+    logging.info(f'Evaluating {len(dataset)} samples...')
     with torch.no_grad():
-        for inputs, labels in dataset:
+        for inputs, labels in tqdm(dataset):
             inputs = {k: v.to(DEVICE) for k, v in ['ct', 'frontal', 'lateral']}
 
         output = model(inputs)
@@ -70,6 +73,7 @@ def main(args: Namespace):
         results['pred'].extend(torch.sigmoid(output))
 
     pd.DataFrame(results).to_csv(args.csv_output_path, index=False)
+    logging.info(f'Stored results at \'{args.csv_output_path}\'')
 
 
 if __name__ == '__main__':
