@@ -170,7 +170,6 @@ def main(args: Namespace):
     early_stop = EarlyStopping(args.patience)
 
     best_vloss = float('inf')
-    best_f1 = 0.0
 
     print('Training on device:', DEVICE)
 
@@ -195,15 +194,14 @@ def main(args: Namespace):
                 **{f'val_{metric}': value for metric, value in metrics.items() }
             })
 
-        if val_loss < best_vloss or metrics['f1'] > best_f1:
-            best_vloss = min(val_loss, best_vloss)
-            best_f1 = max(best_f1, metrics['f1'])
+        if val_loss < best_vloss:
+            best_vloss = val_loss
             model_path = os.path.join(args.model_dir, model_name)
             torch.save(model.state_dict(), model_path)
             print(f"Saved new best model to {model_path}")
 
         if early_stop(val_loss):
-            print(f'triggered early stop as validation loss has not been increasing for {args.patience + 1} epochs')
+            print(f'triggered early stop as validation loss has not been increasing for {args.patience} epochs')
             break
 
 
