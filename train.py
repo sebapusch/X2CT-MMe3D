@@ -23,7 +23,8 @@ BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-3
 TEST_SIZE = 0.1
-PATIENCE = 4
+PATIENCE = 10
+SCHEDULER_PATIENCE = 8
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -163,8 +164,9 @@ def main(args: Namespace):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         factor=0.1,
-        patience=args.patience // 2,
+        patience=args.scheduler_patience,
     )
+    early_stop = EarlyStopping(args.patience)
 
     params = {
         'train': train,
@@ -172,8 +174,6 @@ def main(args: Namespace):
         'loss': torch.nn.BCEWithLogitsLoss(),
         'optimizer': optimizer,
     }
-
-    early_stop = EarlyStopping(args.patience)
 
     best_vloss = float('inf')
 
@@ -223,7 +223,8 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
     parser.add_argument('--weight-decay', type=float, default=WEIGHT_DECAY)
-    parser.add_argument('--patience', type=float, default=PATIENCE)
+    parser.add_argument('--patience', type=int, default=PATIENCE)
+    parser.add_argument('--scheduler-patience', type=int, default=SCHEDULER_PATIENCE)
     # (--no-pretrained to not initialize pretrained weights)
     parser.add_argument('--pretrained', default=True, action=BooleanOptionalAction)
     # (--no-wandb to disable wandb logging)

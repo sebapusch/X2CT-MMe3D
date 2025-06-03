@@ -2,7 +2,7 @@
 #SBATCH --job-name=train
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=1:00:00
+#SBATCH --time=1:30:00
 #SBATCH --mem=32G
 #SBATCH --output=logs/train_%A_%a.out
 #SBATCH --error=logs/train_%A_%a.err
@@ -21,10 +21,11 @@ python train.py \
 --reports=./data/processed/indiana_reports.train.csv \
 --xrays=$DATA_BASE/images/images_normalized \
 --cts=$DATA_BASE/ct_processed_128 \
---patience=10 \
+--patience=12 \
 --model-dir=$MODEL_BASE/baseline \
---epochs=40 \
+--epochs=60 \
 --no-pretrained \
 --model-prefix=rnd-seed-$IX \
 --seed=$IX \
---baseline
+--baseline \
+--lr=0.002

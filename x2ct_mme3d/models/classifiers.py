@@ -19,7 +19,7 @@ class BiplanarCheXNet(nn.Module):
         super().__init__()
         self.frontal_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
         self.lateral_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
-        self.classifier = _make_classifier(1024 * 2, .3)
+        self.classifier = _make_classifier(1024 * 2)
 
     def forward(self, x: dict[str, Tensor]) -> Tensor:
         front = self.frontal_backbone(x['frontal'])
