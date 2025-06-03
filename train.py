@@ -162,7 +162,6 @@ def main(args: Namespace):
                                   weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode='max',
         factor=0.1,
         patience=args.patience // 2,
     )
