@@ -17,13 +17,6 @@ from x2ct_mme3d.data.dataset import X2CTDataset, XRayDataset
 from x2ct_mme3d.models.classifiers import X2CTMMed3D, BiplanarCheXNet
 from x2ct_mme3d.utils.early_stopping import EarlyStopping
 
-RANDOM_SEED = 55
-
-np.random.seed(RANDOM_SEED)
-random.seed(RANDOM_SEED)
-torch.manual_seed(RANDOM_SEED)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(RANDOM_SEED)
 
 EPOCHS = 30
 BATCH_SIZE = 8
@@ -32,6 +25,15 @@ WEIGHT_DECAY = 1e-3
 TEST_SIZE = 0.1
 PATIENCE = 4
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def _set_seed(seed: int) -> None:
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+
 
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
     if args.baseline:
@@ -136,6 +138,9 @@ def _load_model(args: Namespace) -> nn.Module:
     return X2CTMMed3D(args.pretrained)
 
 def main(args: Namespace):
+    if args.seed is not None:
+        _set_seed(args.seed)
+
     train, val = _load_dataset(args)
     model = _load_model(args)
     model.to(DEVICE)
@@ -226,5 +231,6 @@ if __name__ == '__main__':
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
     parser.add_argument('--baseline', default=False, action=BooleanOptionalAction)
     parser.add_argument('--model-prefix', type=str, default='x2ct')
+    parser.add_argument('--seed', type=int, default=None)
 
     main(parser.parse_args())
