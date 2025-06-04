@@ -22,6 +22,7 @@ python train.py \
 --xrays=$DATA_BASE/images/images_normalized \
 --cts=$DATA_BASE/ct_processed_128 \
 --patience=10 \
+--scheduler-patience=5 \
 --model-dir=$MODEL_BASE/x2ct \
 --epochs=40 \
 --no-pretrained \
