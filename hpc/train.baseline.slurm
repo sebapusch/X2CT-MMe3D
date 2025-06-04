@@ -21,9 +21,9 @@ python train.py \
 --reports=./data/processed/indiana_reports.train.csv \
 --xrays=$DATA_BASE/images/images_normalized \
 --cts=$DATA_BASE/ct_processed_128 \
---patience=12 \
+--patience=10 \
 --model-dir=$MODEL_BASE/baseline \
---epochs=60 \
+--epochs=50 \
 --no-pretrained \
 --model-prefix=rnd-seed-$IX \
 --seed=$IX \
