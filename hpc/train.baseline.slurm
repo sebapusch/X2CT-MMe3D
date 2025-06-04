@@ -28,4 +28,4 @@ python train.py \
 --model-prefix=rnd-seed-$IX \
 --seed=$IX \
 --baseline \
---lr=0.002
+--lr=0.001
