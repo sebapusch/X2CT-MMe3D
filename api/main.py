@@ -64,6 +64,7 @@ def create_app(args: Namespace) -> FastAPI:
         frontal: UploadFile = File(...),
         lateral: UploadFile = File(...)
     ):
+        print('received')
         if not frontal.content_type.startswith("image/"):
             raise HTTPException(status_code=422, detail="Invalid file type for frontal x-ray")
         if not lateral.content_type.startswith("image/"):
@@ -81,6 +82,7 @@ def create_app(args: Namespace) -> FastAPI:
         try:
             out = predict(frontal_img, lateral_img)
         except RuntimeError as e:
+            raise e
             raise HTTPException(status_code=500,
                                 detail=f'Unexpected error encountered: {e}')
 
