@@ -49,6 +49,12 @@ class PerX2CTClient:
         if self.process:
             self.process.terminate()
 
+    def generate(self, frontal: np.ndarray, lateral: np.ndarray) -> np.ndarray:
+        self.send(frontal)
+        self.send(lateral)
+
+        return self.receive()
+
     def send(self, data: np.ndarray):
         buf = io.BytesIO()
         np.save(buf, data, allow_pickle=False)
