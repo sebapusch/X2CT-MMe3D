@@ -15,8 +15,5 @@ perx2ct/checkpoints/*
 wandb
 logs
 .venv/
-<<<<<<< Updated upstream
-=======
 envs/
 data/app
->>>>>>> Stashed changes

@@ -41,7 +41,7 @@ class X2CTMMed3D(nn.Module):
         self.frontal_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
         self.lateral_backbone = CheXNetBackbone(CHEX_PATH if pretrained else None)
         self.ct_backbone = Med3DBackbone('resnet18', pretrained)
-        self.classifier = _make_classifier(512 + 1024 * 2)
+        self.classifier = _make_classifier(512 + 1024 * 2, .3)
 
     def forward(self, x: dict[str, Tensor]) -> Tensor:
         front = self.frontal_backbone(x['frontal'])
@@ -68,10 +68,10 @@ class X2CTMed3D(nn.Module):
         return x
 
 
-def _make_classifier(input_size: int) -> nn.Sequential:
+def _make_classifier(input_size: int, dropout: float = .1) -> nn.Sequential:
     return nn.Sequential(
         nn.Linear(input_size, 128),
         nn.ReLU(),
-        nn.Dropout(0.1),
+        nn.Dropout(dropout),
         nn.Linear(128, 1)
     )
