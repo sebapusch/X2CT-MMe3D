@@ -21,9 +21,9 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 8
 
 
-def _numeric_sort_key(name):
-    match = re.match(r'^(\d+)', name)
-    return int(match.group(1)) if match else float('inf')
+def _extract_seed(name: str) -> int:
+    match = re.search(r'(\d+)', name)
+    return int(match.group(1)) if match else -1
 
 
 def _load_model(checkpoint: str, baseline: bool) -> nn.Module:
@@ -38,6 +38,7 @@ def _load_model(checkpoint: str, baseline: bool) -> nn.Module:
     model.eval()
 
     return model
+
 
 def _load_dataset(args: Namespace) -> DataLoader:
     init = {
@@ -57,6 +58,7 @@ def _load_dataset(args: Namespace) -> DataLoader:
                       num_workers=4,
                       pin_memory=True)
 
+
 def evaluate(model: nn.Module, dataset: DataLoader) -> dict:
     labels  = np.array([])
     probs   = np.array([])
@@ -70,12 +72,13 @@ def evaluate(model: nn.Module, dataset: DataLoader) -> dict:
             inputs = {k: v.to(DEVICE) if k in ['ct', 'frontal', 'lateral'] else v
                       for k, v in batch[0].items()}
 
+            batch_labels = batch[1].float().to(DEVICE)
             outputs = model(inputs)
 
-            total_loss += loss(outputs, batch[1]).item()
-            batch_probs = torch.sigmoid(outputs).cpu().numpy()
+            total_loss += loss(outputs.squeeze(), batch_labels).item()
+            batch_probs = torch.sigmoid(outputs).squeeze().cpu().numpy()
 
-            labels  = np.concatenate((labels, batch[1]))
+            labels  = np.concatenate((labels, batch_labels.cpu().numpy()))
             probs   = np.concatenate((probs, batch_probs))
             preds   = np.concatenate((preds, batch_probs > 0.5))
 
@@ -99,26 +102,31 @@ def main(args: Namespace):
     if os.path.isdir(args.checkpoint):
         checkpoints = [f for f in os.listdir(args.checkpoint)
                        if not f.startswith('.') and not path.isdir(f)]
-        checkpoints.sort(key=_numeric_sort_key)
+        checkpoints.sort(key=_extract_seed)
     else:
         checkpoints = [args.checkpoint]
 
     logging.info(f'Located {len(checkpoints)} checkpoints')
-    metrics = {}
-    for k in ['loss', 'accuracy', 'precision', 'recall', 'f1', 'auc']:
-        metrics[k] = []
+    results = {}
+    for k in ['seed', 'loss', 'accuracy', 'precision', 'recall', 'f1', 'auc']:
+        results[k] = []
 
+    dataset = _load_dataset(args)
     for checkpoint in checkpoints:
-        logging.info(f'Evaluating \'{checkpoint}\'')
+        seed = _extract_seed(checkpoint)
+        logging.info(f'Evaluating \'{checkpoint}\' (seed: {seed})')
 
-        model = _load_model(checkpoint, args.baseline)
-        dataset = _load_dataset(args)
+        results['seed'].append(_extract_seed(checkpoint))
+
+        abs_path = path.join(args.checkpoint, checkpoint)
+        model = _load_model(abs_path, args.baseline)
 
         metrics = evaluate(model, dataset)
         for k, v in metrics.items():
-            metrics[k].append(v)
+            logging.info(f'{k}: {v}')
+            results[k].append(v)
 
-    pd.DataFrame(metrics).to_csv(args.csv_out_path, index=True)
+    pd.DataFrame(results).to_csv(args.csv_out_path, index=False)
     logging.info(f'Stored results at \'{args.csv_out_path}\'')
 
 
