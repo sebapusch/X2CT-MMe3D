@@ -245,6 +245,12 @@ python train.py \
 | `--model-prefix`       | Filename prefix for saving model checkpoints       | `x2ct_mme3d_model`         |
 | `--seed`               | Random seed for reproducibility                    | Optional                   |
 
+### Final Model Runs on HPC
+
+For training the final models used in the api and baseline comparison, we relied on the exact hyperparameters and environment specifications defined in the following SLURM job scripts:
+
+- `hpc/train.slurm` – for the **X2CT-MMe3D** model  
+- `hpc/train.baseline.slurm` – for the **BiplanarCheXNet baseline**
 ---
 
 ## 🎛️ Running the Streamlit Demo
