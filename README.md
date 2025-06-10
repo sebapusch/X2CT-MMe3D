@@ -13,12 +13,12 @@
 4. [Running the API manually](#-running-the-api-manually)
 5. [Accessing the API](#-accessing-the-api)
 6. [Dataset Preparation](#-dataset-preparation)
-   * [Downloading the Dataset](#1-downloading-the-dataset)
-   * [Generating Train/Test Splits](#2-generating-train-test-splits)
-   * [Generating Synthetic CT Scans](#3-generating-synthetic-ct-scans)
-   * [Preprocessing Synthetic CTs](#4-preprocessing-synthetic-cts)
+   * [Downloading the Dataset](#1-download-the-dataset)
+   * [Generating Train/Test Splits](#2-optional-generate-traintest-splits)
+   * [Generating Synthetic CT Scans](#3-generate-synthetic-ct-scans)
+   * [Preprocessing Synthetic CTs](#4-preprocess-synthetic-ct-scans)
 7. [Model Training](#-model-training)
-8. [Running the Streamlit Demo](#-running-the-streamlit-demo)
+8. [Running the Streamlit Demo](#%EF%B8%8F-running-the-streamlit-demo)
 
 ---
 
