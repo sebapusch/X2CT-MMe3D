@@ -1,7 +1,6 @@
-> [!TIP]
-> This project builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297), available on GitHub at [github.com/dek924/PerX2CT](https://github.com/dek924/PerX2CT).
-
 # 🧠 X2CT-MMe3D API Setup & Training Guide
+
+This project builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297), available on GitHub at [github.com/dek924/PerX2CT](https://github.com/dek924/PerX2CT).
 
 > [!NOTE]
 > Synthetic CT volume generation at inference currently supports **CPU inference only** due to PerX2CT implementation constraints. GPU acceleration is not available yet.
