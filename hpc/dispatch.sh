@@ -5,7 +5,7 @@ BASELINE="train.baseline.slurm"
 
 echo "Launching slurm jobs..."
 
-for i in $(seq 0 30); do
+for i in $(seq 1 30); do
     IX="$i" 
 
     echo "Submitting jobs with argument: $IX"
