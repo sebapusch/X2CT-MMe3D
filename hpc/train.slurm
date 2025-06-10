@@ -26,5 +26,5 @@ python train.py \
 --model-dir=$MODEL_BASE/x2ct \
 --epochs=40 \
 --no-pretrained \
---model-prefix=rnd-seed-$IX \
+--model-prefix=$IX \
 --seed=$IX
