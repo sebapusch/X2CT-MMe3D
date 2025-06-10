@@ -3,6 +3,7 @@ import logging
 import os.path
 from argparse import Namespace
 from contextlib import asynccontextmanager
+from os import path
 
 import torch
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -27,6 +28,8 @@ class Diagnosis(str, Enum):
 class PredictResponse(BaseModel):
     probability: float
     diagnosis: Diagnosis
+    path_raw_volume: str
+    path_grad_volume: str
 
 def _validate_image(img: Image.Image):
     if img.mode not in ['RGB', 'L']:
@@ -45,7 +48,10 @@ def create_app(args: Namespace) -> FastAPI:
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    predict = Inference(perx2ct_client, args.checkpoint, device)
+    predict = Inference(perx2ct_client,
+                        args.checkpoint,
+                        device,
+                        path.abspath(args.volume_out_dir))
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -106,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--perx2ct_python_path', type=str, help='Python executable path to run perx2ct listener')
     parser.add_argument('--perx2ct_config_path', type=str, help='perx2ct configuration path')
     parser.add_argument('--perx2ct_port', type=int, default=6000, help='perx2ct port')
+    parser.add_argument('--volume_out_dir', type=str, default='./data/app', help='Output directory for volumes')
 
     args_ = parser.parse_args()
 

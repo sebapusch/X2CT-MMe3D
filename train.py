@@ -1,3 +1,4 @@
+import os.path
 import random
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from datetime import datetime
@@ -16,21 +17,27 @@ from x2ct_mme3d.data.dataset import X2CTDataset, XRayDataset
 from x2ct_mme3d.models.classifiers import X2CTMMed3D, BiplanarCheXNet
 from x2ct_mme3d.utils.early_stopping import EarlyStopping
 
-RANDOM_SEED = 55
-
-np.random.seed(RANDOM_SEED)
-random.seed(RANDOM_SEED)
 
 EPOCHS = 30
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-3
+WEIGHT_DECAY = 1e-3
 TEST_SIZE = 0.1
-PATIENCE = 4
-CHESTX_PATH = './models/checkpoints_/chexnet.pth.tar'
+PATIENCE = 10
+SCHEDULER_PATIENCE = 8
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+def _set_seed(seed: int) -> None:
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+
+
 def _load_dataset(args: Namespace) -> (DataLoader, DataLoader):
-    if args.baseline_model:
+    if args.baseline:
         dataset = XRayDataset(
             reports_csv_path=args.reports,
             projections_csv_path=args.projections,
@@ -127,31 +134,39 @@ def evaluate(model: nn.Module, params: dict) -> (float, dict):
     return avg_loss, metrics
 
 def _load_model(args: Namespace) -> nn.Module:
-    if args.baseline_model:
+    if args.baseline:
         return BiplanarCheXNet(args.pretrained)
     return X2CTMMed3D(args.pretrained)
 
 def main(args: Namespace):
+    if args.seed is not None:
+        _set_seed(args.seed)
+
     train, val = _load_dataset(args)
     model = _load_model(args)
     model.to(DEVICE)
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+    arch = 'baseline' if args.baseline else 'ct'
+    model_name = f'{args.model_prefix}-{arch}-{timestamp}'
+
     if args.wandb:
-        arch = 'chexnet' if args.baseline_model else 'med3d+chexnet'
-        wandb.init(project="x2ct-med3d",
-                   name=f'{args.model_prefix}-{arch}-{timestamp}',
-                   config={
-                        'epochs': EPOCHS,
-                        'batch_size': BATCH_SIZE,
-                        'learning_rate': LEARNING_RATE,
-                        'architecture': arch
-                    })
+        wandb.init(project="x2ct",
+                   name=model_name,
+                   config=vars(args))
         wandb.watch_called = False  # Avoid duplicate warnings
         wandb.watch(model, log="all", log_freq=100)
 
-    optimizer = torch.optim.AdamW(model.parameters(), args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(),
+                                  lr=args.lr,
+                                  weight_decay=args.weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        factor=0.1,
+        patience=args.scheduler_patience,
+    )
+    early_stop = EarlyStopping(args.patience)
 
     params = {
         'train': train,
@@ -160,42 +175,39 @@ def main(args: Namespace):
         'optimizer': optimizer,
     }
 
-    early_stop = EarlyStopping(args.patience)
-
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     best_vloss = float('inf')
-    best_f1 = 0.0
 
     print('Training on device:', DEVICE)
 
     for epoch in range(args.epochs):
         print("-------------------")
-        print(f"EPOCH {epoch + 1}:")
+        print(f"EPOCH {epoch}:")
         print("-------------------")
 
         train_loss = train_one_epoch(model, params)
         val_loss, metrics = evaluate(model, params)
+
+        scheduler.step(val_loss)
 
         print(f'LOSS train {train_loss:.4f} valid {val_loss:.4f}')
         print({f'{metric}: {value}' for metric, value in metrics.items() })
 
         if args.wandb:
             wandb.log({
-                "epoch": epoch + 1,
+                "epoch": epoch,
                 "train_loss": train_loss,
                 "val_loss": val_loss,
                 **{f'val_{metric}': value for metric, value in metrics.items() }
             })
 
-        if val_loss < best_vloss or metrics['f1'] > best_f1:
-            best_vloss = min(val_loss, best_vloss)
-            best_f1 = max(best_f1, metrics['f1'])
-            model_path = f'models/{args.model_prefix}_{timestamp}_epoch{epoch}'
+        if val_loss < best_vloss:
+            best_vloss = val_loss
+            model_path = os.path.join(args.model_dir, model_name)
             torch.save(model.state_dict(), model_path)
             print(f"Saved new best model to {model_path}")
 
         if early_stop(val_loss):
-            print(f'triggered early stop as validation loss has not been increasing for {args.patience + 1} epochs')
+            print(f'triggered early stop as validation loss has not been increasing for {args.patience} epochs')
             break
 
 
@@ -205,16 +217,20 @@ if __name__ == '__main__':
     parser.add_argument('--projections', type=str, default='./data/processed/indiana_projections.csv')
     parser.add_argument('--xrays', type=str, required=True)
     parser.add_argument('--cts', type=str, required=True)
+    parser.add_argument('--model-dir', type=str, required=True)
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE)
     parser.add_argument('--test-size', type=float, default=TEST_SIZE)
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--lr', type=float, default=LEARNING_RATE)
-    parser.add_argument('--patience', type=float, default=PATIENCE)
+    parser.add_argument('--weight-decay', type=float, default=WEIGHT_DECAY)
+    parser.add_argument('--patience', type=int, default=PATIENCE)
+    parser.add_argument('--scheduler-patience', type=int, default=SCHEDULER_PATIENCE)
     # (--no-pretrained to not initialize pretrained weights)
     parser.add_argument('--pretrained', default=True, action=BooleanOptionalAction)
     # (--no-wandb to disable wandb logging)
     parser.add_argument('--wandb', default=True, action=BooleanOptionalAction)
-    parser.add_argument('--baseline-model', default=False, action=BooleanOptionalAction)
+    parser.add_argument('--baseline', default=False, action=BooleanOptionalAction)
     parser.add_argument('--model-prefix', type=str, default='x2ct')
+    parser.add_argument('--seed', type=int, default=None)
 
     main(parser.parse_args())

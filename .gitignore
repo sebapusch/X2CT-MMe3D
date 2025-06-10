@@ -15,3 +15,5 @@ perx2ct/checkpoints/*
 wandb
 logs
 .venv/
+envs/
+data/app
