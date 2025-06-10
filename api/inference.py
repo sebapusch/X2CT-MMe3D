@@ -53,18 +53,11 @@ class Inference:
         raw_cam = self.grad_cam(class_idx=0, scores=scores)[0].squeeze().cpu().numpy()
         target_shape = volume_norm.shape
 
-        print(raw_cam.shape)
-
         zoom_factors = [t / c for t, c in zip(target_shape, raw_cam.shape)]
 
         upsampled_cam = zoom(raw_cam, zoom_factors, order=3, mode='reflect')
         upsampled_cam = (upsampled_cam - upsampled_cam.min()) / (
                             (upsampled_cam.max() - upsampled_cam.min()))
-
-#        raw_cam_up = F.interpolate(raw_cam, size=(64, 64, 64), mode='trilinear', align_corners=False)
-#        raw_cam_up = F.interpolate(raw_cam_up, size=target_shape, mode='trilinear', align_corners=False)
-#        raw_cam_up = raw_cam_up.cpu().detach().numpy()
-#        raw_cam_up = gaussian_filter(raw_cam_up, sigma=2.5)
 
         ct_rgb = np.repeat(volume_norm[..., np.newaxis], 3, axis=3)
 
@@ -96,7 +89,6 @@ class Inference:
             raise RuntimeError('Unable to generate CT scan')
 
         volume = torch.from_numpy(volume_np).unsqueeze(0)
-
 
         ct_preprocessed = self.ct_pre_pipe(volume).unsqueeze(0).to(self.device)
 
