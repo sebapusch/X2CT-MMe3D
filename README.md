@@ -1,4 +1,3 @@
-
 # 🧠 X2CT-MMe3D API Setup & Training Guide
 
 > [!NOTE]
@@ -13,12 +12,13 @@
 3. [Running the API with Docker](#-running-the-api-with-docker)
 4. [Running the API manually](#-running-the-api-manually)
 5. [Accessing the API](#-accessing-the-api)
-6. [Dataset Preparation](-#dataset-preparation)
+6. [Dataset Preparation](#-dataset-preparation)
    * [Downloading the Dataset](#-downloading-the-dataset)
    * [Generating Train/Test Splits](#-generating-train-test-splits)
    * [Generating Synthetic CT Scans](#-generating-synthetic-ct-scans)
    * [Preprocessing Synthetic CTs](#-preprocessing-synthetic-cts)
 7. [Model Training](#-model-training)
+8. [Running the Streamlit Demo](#-running-the-streamlit-demo)
 
 ---
 
@@ -56,7 +56,7 @@ X2CT-MMe3D/
 ```
 models/
 └── checkpoints/
-    └── resnet18_20250523_084333_epoch13.ckpt
+    └── 2-x2ct-20250604_215106
 
 perx2ct/
 └── checkpoints/
@@ -99,9 +99,6 @@ cd perx2ct
 conda create -n med python=3.10 -y
 conda activate med
 ```
-
-> [!NOTE]
-> Ensure your Conda version is 4.11+ for Python 3.10 support.
 
 ### 3. Install Project Dependencies
 
@@ -209,32 +206,68 @@ Train the X2CT-MMe3D model using the prepared data:
 ```bash
 python train.py \
   --reports ./data/processed/indiana_reports.train.csv \
-  --projections ./data/raw/indiana_projections.csv \
+  --projections ./data/processed/indiana_projections.csv \
   --xrays ./data/raw/images \
   --cts ./data/processed_cts \
+  --model-dir ./models/checkpoints \
   --batch-size 8 \
   --epochs 30 \
   --lr 1e-3 \
-  --patience 4 \
-  --pretrained True \
-  --wandb True \
-  --baseline-model False \
+  --weight-decay 1e-3 \
+  --test-size 0.1 \
+  --patience 10 \
+  --scheduler-patience 8 \
+  --pretrained \
+  --wandb \
+  --baseline False \
   --model-prefix x2ct_mme3d_model
 ```
 
 ### Training Parameters
 
-| Argument           | Description                                                | Default / Notes    |
-| ------------------ | ---------------------------------------------------------- | ------------------ |
-| `--reports`        | Training reports CSV file                                  | Required           |
-| `--projections`    | Projections metadata CSV                                   | Required           |
-| `--xrays`          | Directory containing X-ray images                          | Required           |
-| `--cts`            | Directory containing preprocessed CT volumes               | Required           |
-| `--batch-size`     | Batch size for training                                    | 8                  |
-| `--epochs`         | Number of training epochs                                  | 30                 |
-| `--lr`             | Learning rate                                              | 0.001              |
-| `--patience`       | Early stopping patience (epochs)                           | 4                  |
-| `--pretrained`     | Use pretrained weights (toggle with `--no-pretrained`)     | True               |
-| `--wandb`          | Enable Weights & Biases logging (toggle with `--no-wandb`) | True               |
-| `--baseline-model` | Train baseline BiplanarCheXNet model                       | False              |
-| `--model-prefix`   | Prefix for saving model checkpoints                        | `x2ct_mme3d_model` |
+| Argument               | Description                                         | Default / Notes           |
+|------------------------|-----------------------------------------------------|----------------------------|
+| `--reports`            | CSV with diagnosis labels                          | Required                   |
+| `--projections`        | Projections metadata CSV                           | Required                   |
+| `--xrays`              | Directory with X-ray images                        | Required                   |
+| `--cts`                | Directory with preprocessed CT volumes             | Required                   |
+| `--model-dir`          | Output directory for saving model checkpoints      | Required                   |
+| `--batch-size`         | Training batch size                                | 8                          |
+| `--epochs`             | Total number of epochs                             | 30                         |
+| `--lr`                 | Learning rate                                      | 0.001                      |
+| `--weight-decay`       | Weight decay for optimizer                         | 0.001                      |
+| `--test-size`          | Validation data split ratio                        | 0.1                        |
+| `--patience`           | Early stopping patience (in epochs)                | 10                         |
+| `--scheduler-patience` | Learning rate scheduler patience                   | 8                          |
+| `--pretrained`         | Whether to load pretrained model weights           | Enabled by default         |
+| `--wandb`              | Enable Weights & Biases logging                    | Enabled by default         |
+| `--baseline`           | Train the BiplanarCheXNet baseline model           | `False` = Use X2CT-MMe3D   |
+| `--model-prefix`       | Filename prefix for saving model checkpoints       | `x2ct_mme3d_model`         |
+| `--seed`               | Random seed for reproducibility                    | Optional                   |
+
+---
+
+## 🎛️ Running the Streamlit Demo
+
+Launch an interactive frontend to upload X-rays, run inference, and visualize 3D slices of the predicted CT scans.
+
+### 1. Start the FastAPI Server First
+
+Make sure the API is running and accessible at `http://localhost:8000`. You can do this either via Docker or manual setup.
+
+### 2. Start the Streamlit App
+
+```bash
+streamlit run app.py
+```
+
+### 3. Usage
+
+1. Upload **frontal** and **lateral** chest X-ray images.
+2. Click **Submit**.
+3. View the **diagnosis** and scroll through axial, sagittal, and coronal slices of the synthetic CT (raw + Grad-CAM version).
+
+> [!NOTE]
+> The demo assumes synthetic volumes are of shape `128×128×128` stored as `.npy` files.
+
+---
