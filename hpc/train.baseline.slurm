@@ -25,7 +25,7 @@ python train.py \
 --model-dir=$MODEL_BASE/baseline \
 --epochs=50 \
 --no-pretrained \
---model-prefix=rnd-seed-$IX \
+--model-prefix=$IX \
 --seed=$IX \
 --baseline \
 --lr=0.001
