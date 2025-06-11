@@ -1,5 +1,7 @@
-import uuid
+import logging
 from os import path
+import zlib
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -69,24 +71,53 @@ class Inference:
 
         return overlay
 
-    def _store_volumes(self, raw: np.ndarray, grad: np.ndarray) -> (str, str):
-        uid = uuid.uuid1()
-        f_path_raw = path.join(self.volume_out_dir, f'{uid}.npy')
-        f_path_grad = path.join(self.volume_out_dir, f'{uid}.grad.npy')
+    def _filename(self, frontal: np.ndarray, lateral: np.ndarray) -> str:
+        """
+        Create unique hash from frontal + lateral
+        """
+        hash_front = zlib.adler32(frontal.tobytes())
+        hash_lat = zlib.adler32(lateral.tobytes())
+
+        return hex(hash_front) + hex(hash_lat)
+
+    def _store_volumes(self, filename: str, raw: np.ndarray, grad: np.ndarray) -> None:
+        f_path_raw = path.join(self.volume_out_dir, f'{filename}.npy')
+        f_path_grad = path.join(self.volume_out_dir, f'{filename}.grad.npy')
 
         np.save(f_path_raw, raw)
         np.save(f_path_grad, grad)
 
-        return f_path_raw, f_path_grad
+    def _load_cached_ct(self, filename: str) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        f_path_raw = path.join(self.volume_out_dir, f'{filename}.npy')
+        f_path_grad = path.join(self.volume_out_dir, f'{filename}.grad.npy')
 
+        if not path.exists(f_path_raw):
+            return None
 
+        logging.info('Loading CT scans from cache')
+
+        raw: np.ndarray = np.load(f_path_raw)
+        grad: np.ndarray = np.load(f_path_grad)
+
+        return raw, grad
 
     def __call__(self, frontal_img: Image.Image, lateral_img: Image.Image) -> dict:
-        try:
-            volume_np = self.perx2ct.generate(np.array(frontal_img),
-                                              np.array(lateral_img))
-        except ValueError:
-            raise RuntimeError('Unable to generate CT scan')
+        np_frontal = np.array(frontal_img)
+        np_lateral = np.array(lateral_img)
+
+        filename = self._filename(np_frontal, np_lateral)
+
+        cached = self._load_cached_ct(filename)
+        is_cached = cached is not None
+
+        if not is_cached:
+            try:
+                volume_np = self.perx2ct.generate(np.array(frontal_img),
+                                                  np.array(lateral_img))
+            except ValueError:
+                raise RuntimeError('Unable to generate CT scan')
+        else:
+            volume_np, grad_cam = cached
 
         volume = torch.from_numpy(volume_np).unsqueeze(0)
 
@@ -98,17 +129,16 @@ class Inference:
             'ct': ct_preprocessed,
         }
 
-
         pred = self.model(data)
         prob = float(torch.sigmoid(pred).flatten()[0])
 
-        grad_cam = self._ct_heat_map(volume_np, ct_preprocessed, pred)
-        path_raw, path_grad = self._store_volumes(volume_np, grad_cam)
-
+        if not is_cached:
+            grad_cam = self._ct_heat_map(volume_np, ct_preprocessed, pred)
+            self._store_volumes(filename, volume_np, grad_cam)
 
         return {
             'probability': prob,
             'diagnosis':  'healthy' if prob < self.threshold else 'disease',
-            'path_raw_volume': path_raw,
-            'path_grad_volume': path_grad,
+            'path_raw_volume': path.join(self.volume_out_dir, f'{filename}.npy'),
+            'path_grad_volume': path.join(self.volume_out_dir, f'{filename}.grad.npy'),
         }
