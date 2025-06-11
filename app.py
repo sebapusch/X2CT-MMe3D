@@ -25,7 +25,7 @@ if submit:
 
         try:
             response = requests.post(INFERENCE_ENDPOINT, files=files).json()
-            print(response)
+
             st.session_state.diagnosis = response['diagnosis']
             st.session_state.path_raw  = response['path_raw_volume']
             st.session_state.path_grad = response['path_grad_volume']
@@ -57,7 +57,7 @@ if st.session_state.diagnosis is not None:
             st.pyplot(fig)
 
     cols = st.columns(2)
-    st.session_state.slice_idx[1] = st.slider('Sagittal', 0, w, w // 2,)
+    st.session_state.slice_idx[1] = st.slider('Sagittal', 0, w - 1, w // 2,)
     for i in range(2):
         volume = np.load(volumes[i])
         with cols[i]:
@@ -67,7 +67,7 @@ if st.session_state.diagnosis is not None:
             st.pyplot(fig)
 
     cols = st.columns(2)
-    st.session_state.slice_idx[2] = st.slider('Coronal', 0, h, h // 2)
+    st.session_state.slice_idx[2] = st.slider('Coronal', 0, h - 1, h // 2)
     for i in range(2):
         volume = np.load(volumes[i])
         with cols[i]:
