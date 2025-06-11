@@ -43,7 +43,7 @@ class Inference:
 
     def _load_grad_cam(self):
         return GradCAM(model=self.model.ct_backbone,
-                       target_layer=self.model.ct_backbone.backbone[-1][-1].conv2)
+                       target_layer=self.model.ct_backbone.backbone[-1][-2].conv2)
 
     def _ct_heat_map(self,
                      raw_volume: np.ndarray,
