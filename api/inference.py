@@ -112,8 +112,7 @@ class Inference:
 
         if not is_cached:
             try:
-                volume_np = self.perx2ct.generate(np.array(frontal_img),
-                                                  np.array(lateral_img))
+                volume_np = self.perx2ct.generate(np_frontal, np_lateral)
             except ValueError:
                 raise RuntimeError('Unable to generate CT scan')
         else:
