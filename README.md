@@ -1,71 +1,56 @@
 # 🧠 X2CT-MMe3D
 
+**X2CT-MMe3D** is an AI pipeline for pulmonary disease diagnosis that leverages synthetic 3D CT volumes generated from paired chest X-rays.  
+It builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297) and introduces:
+
+- A **multimodal architecture (MMe3D)** that learns from synthetic CTs and radiology reports  
+- A complete **diagnosis pipeline** using 3D convolutional networks  
+- A **FastAPI backend**, a **Streamlit demo**, and tools for data preprocessing, training, and inference  
+
+> **Goal**: Investigate whether **synthetic CT volumes** — inferred from frontal and lateral X-rays — can enhance diagnosis when real CTs are unavailable.
+
 ![Model architecture](./data/assets/diagram.png)
 
-X2CT-MMe3D is an AI pipeline for pulmonary disease diagnosis that leverages synthetic 3D CT volumes generated from paired chest X-rays.
-It builds on PerX2CT, a model for volumetric CT synthesis, and introduces:
-
-* a multi-modal architecture (MMe3D) for learning from synthetic CTs and radiology reports
-* a full diagnosis pipeline using 3D convolutional networks
-* tools for data preprocessing, training, and inference, along with a FastAPI backend and a Streamlit-based demo
-
-The goal is to investigate whether synthetic CT volumes — inferred from frontal and lateral X-rays — can be used to improve automatic diagnosis of pulmonary conditions in settings where real CTs are unavailable.
-
-This project builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297), available on GitHub at [github.com/dek924/PerX2CT](https://github.com/dek924/PerX2CT).
-
-> [!NOTE]
-> Synthetic CT volume generation at inference currently supports **CPU inference only** due to PerX2CT implementation constraints. GPU acceleration is not available yet.
+> **Note:** CT generation at inference currently supports **CPU only** due to PerX2CT constraints. GPU acceleration is not yet available.
 
 ---
 
-## 📋 Table of Contents
+## 📚 Table of Contents
 
-1. [Project Structure Overview](#-project-structure-overview)
-2. [Results](#-results)
-3. [Prerequisites & Model Checkpoints](#-prerequisites--model-checkpoints)
-4. [Running the API with Docker](#-running-the-api-with-docker)
-5. [Running the API manually](#-running-the-api-manually)
-6. [Accessing the API](#-accessing-the-api)
-7. [Dataset Preparation](#-dataset-preparation)
-   * [Downloading the Dataset](#1-download-the-dataset)
-   * [Generating Train/Test Splits](#2-optional-generate-traintest-splits)
-   * [Generating Synthetic CT Scans](#3-generate-synthetic-ct-scans)
-   * [Preprocessing Synthetic CTs](#4-preprocess-synthetic-ct-scans)
-8. [Model Training](#-model-training)
-9. [Running the Streamlit Demo](#%EF%B8%8F-running-the-streamlit-demo)
+1. [Project Overview](#-project-overview)  
+2. [Installation & Setup](#-installation--setup)  
+3. [Dataset Preparation](#-dataset-preparation)  
+4. [Model Training](#-model-training)  
+5. [Running the API](#-running-the-api)  
+6. [Running the Streamlit Demo](#-running-the-streamlit-demo)  
+7. [Results & Evaluation](#-results--evaluation)  
+8. [Project Structure](#-project-structure)  
 
 ---
 
-## 📁 Project Structure Overview
+## 🧩 Project Overview
 
-```
-X2CT-MMe3D/
-├── api/                      # FastAPI REST API code
-│   └── main.py               # API entry point
-├── data/                     # Dataset and processed data folders
-│   ├── processed/            # Processed CSV files and preprocessed data
-│   ├── raw/                  # Raw datasets and images
-│   └── synthetic_cts/        # Generated synthetic CT volumes
-├── docker/                   # Docker build files
-│   ├── Dockerfile            # Linux Dockerfile
-│   └── Dockerfile.macos      # macOS Dockerfile
-├── models/                   # Model checkpoints for X2CT-MMe3D
-│   └── checkpoints/
-├── perx2ct/                  # PerX2CT model code and dependencies
-├── scripts/                  # Utility and helper scripts
-│   ├── generate_csv.py       # Generate train/test splits CSV
-│   └── preprocess_ct.py      # Preprocess synthetic CTs
-├── requirements.txt          # Python dependencies
-└── train.py                  # Training script for X2CT-MMe3D
+- **Input**: Frontal and lateral chest X-rays + associated radiology report  
+- **Output**: Disease prediction using synthetic CTs and 2D inputs  
+- **Components**:  
+  - PerX2CT: CT volume synthesis from X-rays  
+  - MMe3D: Multimodal classifier (X-rays + synthetic CTs)  
+  - Streamlit demo + FastAPI server  
+
+---
+
+## 🛠️ Installation & Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-repo/X2CT-MMe3D.git
+cd X2CT-MMe3D
 ```
 
----
+### 2. Download Model Checkpoints
 
-## 📥 Prerequisites & Model Checkpoints
-
-1. Download the required model checkpoints from [Google Drive](https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6?usp=sharing).
-
-2. Place the files as follows:
+From [Google Drive](https://drive.google.com/drive/folders/1wbhBSwKUv_Co5oI2Z8uKbEDQYTB9N5p6?usp=sharing):
 
 ```
 models/
@@ -77,159 +62,55 @@ perx2ct/
     └── PerX2CT.ckpt
 ```
 
----
+### 3. Install Dependencies
 
-
-## 📈 Results
-
-### Training
-![AUC baseline vs proposed](data/assets/auc.png)
-**Figure:** Mean validation AUC per epoch (±95% confidence interval) for the baseline model (2D X-rays only, red) vs. our X2CT multimodal model (X-rays + synthetic 3D CTs, blue).
-
-The X2CT model consistently outperforms the baseline throughout training, with higher mean AUC and lower variance. This supports the effectiveness of integrating synthetic volumetric information into the diagnostic pipeline.
-We conducted a comparative evaluation to assess whether combining **synthetic 3D CT volumes** with 2D X-ray inputs improves pulmonary disease classification, compared to using X-rays alone.
-
-### 🔬 Statistical test
-
-- **Baseline**: 2D DenseNet-121 (CheXNet-style) trained on frontal and lateral chest X-rays.
-- **Proposed Method**: A multimodal classifier combining DenseNet-121 (X-rays) with Med3D (synthetic CT volumes from PerX2CT).
-- **Dataset**: Indiana Chest X-ray dataset, repurposed for multimodal training and evaluation.
-- **Evaluation**: 30 training iterations per model, using different initialization weights, with **bootstrapped test performance (10,000 samples)**.
-
-### 📊 Key Metrics
-
-| Metric     | Baseline (X-rays only) | X-rays + Synthetic CT (Ours) | Improvement | 95% CI       | p-value |
-|------------|------------------------|-------------------------------|-------------|--------------|---------|
-| **F1 Score** | 0.61                   | **0.68**                      | **+0.07**   | (0.03, 0.12) | < 0.001 |
-| **ROC AUC** | 0.80                   | **0.83**                      | **+0.03**   | (0.01, 0.05) | < 0.001 |
-
-> 🧪 These results indicate **statistically significant improvements** in classification performance when including synthetic CT volumes alongside traditional 2D images.
-
----
-
-## 🐳 Running the API with Docker
-
-### 1. Build the Docker Image
-
-```bash
-docker build -f docker/Dockerfile -t med:latest .
-```
-
-> [!TIP]
-> If building on macOS or if architecture errors occur, try building with the `Dockerfile.macos` file instead
-
-### 2. Run the Docker Container
-
-```bash
-docker run -p 8000:8000 med:latest
-```
-
----
-
-## 🧪 Running the API Manually
-
-### 1. Set Up PerX2CT Environment
-
-```bash
-cd perx2ct
-# Follow instructions in perx2ct/README.md to install dependencies
-```
-
-### 2. Create and Activate the Conda Environment for API
+Create a conda environment and install dependencies:
 
 ```bash
 conda create -n med python=3.10 -y
 conda activate med
-```
-
-### 3. Install Project Dependencies
-
-From the project root:
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 4. Start the API Server
-
-```bash
-python PYTHONPATH=. api/main.py \
-  --port 8000 \
-  --checkpoint ./models/checkpoints/resnet18_20250523_084333_epoch13.ckpt \
-  --perx2ct_python_path <path_to_perx2ct_conda_python_executable> \
-  --perx2ct_config_path ./perx2ct/PerX2CT/configs/PerX2CT.yaml \
-  --perx2ct_model_path ./perx2ct/PerX2CT/checkpoints/PerX2CT.ckpt
-```
-
-Replace `<path_to_perx2ct_conda_python_executable>` with the absolute path to the Python executable inside your PerX2CT conda environment.
-
----
-
-## ✅ Accessing the API
-
-* API Root URL:
-  `http://localhost:8000`
-
-* Interactive API Documentation (Swagger UI):
-  `http://localhost:8000/docs`
+Set up PerX2CT as per `perx2ct/README.md`.
 
 ---
 
 ## 📊 Dataset Preparation
 
-### 1. Download the Dataset
+### 1. Download Dataset
 
-Download the [Chest X-rays - Indiana University dataset](https://www.kaggle.com/datasets/raddar/chest-xrays-indiana-university) and place X-ray images in:
+Get the [Indiana Chest X-rays dataset](https://www.kaggle.com/datasets/raddar/chest-xrays-indiana-university) and place the files like so:
 
 ```
-X2CT-MMe3D/
-├── data/
-│   ├── raw/
-│   │   ├── indiana_reports.csv
-│   │   ├── indiana_projections.csv
-│   │   └── images/
-│   │       └── ... (x-ray images)
+data/raw/
+├── indiana_reports.csv
+├── indiana_projections.csv
+└── images/
+    └── ... (X-ray images)
 ```
-
----
 
 ### 2. (Optional) Generate Train/Test Splits
-
-Run the CSV generator script from the project root to create new splits:
 
 ```bash
 python generate_csv.py
 ```
 
-This creates:
+Outputs:
+- `data/processed/indiana_reports.train.csv`  
+- `data/processed/indiana_reports.test.csv`  
 
-* `data/processed/indiana_reports.csv`
-* `data/processed/indiana_reports.train.csv`
-* `data/processed/indiana_reports.test.csv`
-
-If skipped, existing CSVs in `data/processed` will be used.
-
----
-
-### 3. Generate Synthetic CT Scans
-
-Set up PerX2CT environment as per `perx2ct/README.md` and run:
+### 3. Generate Synthetic CT Volumes
 
 ```bash
 python generate_synthetic_volumes.py \
   --save_dir ./data/synthetic_cts \
   --projection_dir ./data/raw/images \
   --csv_reports_path ./data/processed/indiana_reports.csv \
-  --csv_projections_path ./data/processed/indiana_projections.csv \
+  --csv_projections_path ./data/processed/indiana_projections.csv
 ```
 
-See `perx2ct/README.md` for more detailed instructions.
-
----
-
-### 4. Preprocess Synthetic CT Scans
-
-Run preprocessing to prepare CT scans for training:
+### 4. Preprocess Synthetic CTs
 
 ```bash
 python preprocess_ct.py \
@@ -243,7 +124,7 @@ python preprocess_ct.py \
 
 ## 🚀 Model Training
 
-Train the X2CT-MMe3D model using the prepared data:
+Train the multimodal diagnosis model:
 
 ```bash
 python train.py \
@@ -252,72 +133,119 @@ python train.py \
   --xrays ./data/raw/images \
   --cts ./data/processed_cts \
   --model-dir ./models/checkpoints \
-  --batch-size 8 \
-  --epochs 30 \
-  --lr 1e-3 \
-  --weight-decay 1e-3 \
-  --test-size 0.1 \
-  --patience 10 \
-  --scheduler-patience 8 \
-  --pretrained \
-  --wandb \
-  --baseline False \
+  --batch-size 8 --epochs 30 --lr 1e-3 \
+  --weight-decay 1e-3 --test-size 0.1 \
+  --patience 10 --scheduler-patience 8 \
+  --pretrained --wandb --baseline False \
   --model-prefix x2ct_mme3d_model
 ```
 
-### Training Parameters
+### SLURM Training Scripts
 
-| Argument               | Description                                         | Default / Notes           |
-|------------------------|-----------------------------------------------------|----------------------------|
-| `--reports`            | CSV with diagnosis labels                          | Required                   |
-| `--projections`        | Projections metadata CSV                           | Required                   |
-| `--xrays`              | Directory with X-ray images                        | Required                   |
-| `--cts`                | Directory with preprocessed CT volumes             | Required                   |
-| `--model-dir`          | Output directory for saving model checkpoints      | Required                   |
-| `--batch-size`         | Training batch size                                | 8                          |
-| `--epochs`             | Total number of epochs                             | 30                         |
-| `--lr`                 | Learning rate                                      | 0.001                      |
-| `--weight-decay`       | Weight decay for optimizer                         | 0.001                      |
-| `--test-size`          | Validation data split ratio                        | 0.1                        |
-| `--patience`           | Early stopping patience (in epochs)                | 10                         |
-| `--scheduler-patience` | Learning rate scheduler patience                   | 8                          |
-| `--pretrained`         | Whether to load pretrained model weights           | Enabled by default         |
-| `--wandb`              | Enable Weights & Biases logging                    | Enabled by default         |
-| `--baseline`           | Train the BiplanarCheXNet baseline model           | `False` = Use X2CT-MMe3D   |
-| `--model-prefix`       | Filename prefix for saving model checkpoints       | `x2ct_mme3d_model`         |
-| `--seed`               | Random seed for reproducibility                    | Optional                   |
+- `hpc/train.slurm`: X2CT-MMe3D  
+- `hpc/train.baseline.slurm`: BiplanarCheXNet baseline  
 
-### Final Model Runs on HPC
+---
 
-For training the final models used in the api and baseline comparison, we relied on the exact hyperparameters and environment specifications defined in the following SLURM job scripts:
+## 🐳 Running the API
 
-- `hpc/train.slurm` – for the **X2CT-MMe3D** model  
-- `hpc/train.baseline.slurm` – for the **BiplanarCheXNet baseline**
+### Option 1: Docker
+
+```bash
+docker build -f docker/Dockerfile -t med:latest .
+docker run -p 8000:8000 med:latest
+```
+
+> 💡 On macOS, try `Dockerfile.macos` if needed.
+
+### Option 2: Manual (Local)
+
+```bash
+python PYTHONPATH=. api/main.py \
+  --port 8000 \
+  --checkpoint ./models/checkpoints/resnet18_20250523_084333_epoch13.ckpt \
+  --perx2ct_python_path <path_to_perx2ct_python> \
+  --perx2ct_config_path ./perx2ct/PerX2CT/configs/PerX2CT.yaml \
+  --perx2ct_model_path ./perx2ct/PerX2CT/checkpoints/PerX2CT.ckpt
+```
+
+> Replace `<path_to_perx2ct_python>` with the PerX2CT environment Python path.
+
+### Access the API
+
+- Root: `http://localhost:8000`  
+- Swagger UI: `http://localhost:8000/docs`  
+
 ---
 
 ## 🎛️ Running the Streamlit Demo
 
-![Example from the streamlit demo](./data/assets/screenshot.png)
+Launch an interactive tool for uploading X-rays, running inference, and viewing 3D slices.
 
-Launch an interactive frontend to upload X-rays, run inference, and visualize 3D slices of the predicted CT scans.
+### 1. Make sure the API is running
 
-### 1. Start the FastAPI Server First
+Start it via Docker or manual mode (see above).
 
-Make sure the API is running and accessible at `http://localhost:8000`. You can do this either via Docker or manual setup.
-
-### 2. Start the Streamlit App
+### 2. Start Streamlit App
 
 ```bash
 streamlit run app.py
 ```
 
-### 3. Usage
+### 3. Interact
 
-1. Upload **frontal** and **lateral** chest X-ray images.
-2. Click **Submit**.
-3. View the **diagnosis** and scroll through axial, sagittal, and coronal slices of the synthetic CT (raw + Grad-CAM version).
+1. Upload **frontal** and **lateral** X-rays  
+2. Click **Submit**  
+3. View diagnosis + axial/sagittal/coronal slices  
 
-> [!NOTE]
-> The demo assumes synthetic volumes are of shape `128×128×128` stored as `.npy` files.
+> **Note:** Demo expects `.npy` files with shape `128×128×128`.
+
+![Streamlit demo](./data/assets/screenshot.png)
 
 ---
+
+## 📈 Results & Evaluation
+
+### Training Comparison
+
+![AUC Comparison](data/assets/auc.png)
+
+- **Red**: Baseline (2D X-rays only)  
+- **Blue**: X2CT-MMe3D (X-rays + synthetic CTs)
+
+> X2CT-MMe3D achieves consistently higher mean AUC and lower variance.
+
+### 🔬 Statistical Evaluation
+
+| Metric     | Baseline (X-rays) | X-rays + CTs (Ours) | Δ Improvement | 95% CI       | p-value  |
+|------------|-------------------|---------------------|---------------|--------------|----------|
+| F1 Score   | 0.61              | **0.68**            | **+0.07**     | (0.03, 0.12) | < 0.001  |
+| ROC AUC    | 0.80              | **0.83**            | **+0.03**     | (0.01, 0.05) | < 0.001  |
+
+- 30 training runs per model  
+- Bootstrapped test samples (10,000)  
+- Significant improvements in diagnostic performance  
+
+---
+
+## 🗂️ Project Structure
+
+```bash
+X2CT-MMe3D/
+├── api/                  # FastAPI server
+├── data/                 # Raw, processed, synthetic datasets
+├── docker/               # Dockerfiles
+├── models/               # Trained checkpoints
+├── perx2ct/              # CT generation model (PerX2CT)
+├── scripts/              # Preprocessing utilities
+├── train.py              # Main training script
+├── app.py                # Streamlit demo
+└── requirements.txt      # Python dependencies
+```
+
+---
+
+## 📬 Contact & Credits
+
+Built on [PerX2CT](https://github.com/dek924/PerX2CT)  
+Developed for multimodal learning and clinical research in resource-constrained settings.
