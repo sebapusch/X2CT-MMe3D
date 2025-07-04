@@ -199,8 +199,6 @@ streamlit run app.py
 2. Click **Submit**  
 3. View diagnosis + axial/sagittal/coronal slices  
 
-> **Note:** Demo expects `.npy` files with shape `128×128×128`.
-
 ![Streamlit demo](./data/assets/screenshot.png)
 
 ---
