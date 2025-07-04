@@ -1,4 +1,17 @@
-# 🧠 X2CT-MMe3D API Setup & Training Guide
+# 🧠 X2CT-MMe3D
+
+
+
+X2CT-MMe3D is an AI pipeline for pulmonary disease diagnosis that leverages synthetic 3D CT volumes generated from paired chest X-rays.
+It builds on PerX2CT, a model for volumetric CT synthesis, and introduces:
+
+* a multi-modal architecture (MMe3D) for learning from synthetic CTs and radiology reports
+* a full diagnosis pipeline using 3D convolutional networks
+* tools for data preprocessing, training, and inference, along with a FastAPI backend and a Streamlit-based demo
+
+The goal is to investigate whether synthetic CT volumes — inferred from frontal and lateral X-rays — can be used to improve automatic diagnosis of pulmonary conditions in settings where real CTs are unavailable.
+
+![Example from the streamlit demo](./data/assets/screenshot.png)
 
 This project builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297), available on GitHub at [github.com/dek924/PerX2CT](https://github.com/dek924/PerX2CT).
 
