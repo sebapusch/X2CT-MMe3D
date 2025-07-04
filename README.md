@@ -23,17 +23,18 @@ This project builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.0
 ## 📋 Table of Contents
 
 1. [Project Structure Overview](#-project-structure-overview)
-2. [Prerequisites & Model Checkpoints](#-prerequisites--model-checkpoints)
-3. [Running the API with Docker](#-running-the-api-with-docker)
-4. [Running the API manually](#-running-the-api-manually)
-5. [Accessing the API](#-accessing-the-api)
-6. [Dataset Preparation](#-dataset-preparation)
+2. [Results](#-results)
+3. [Prerequisites & Model Checkpoints](#-prerequisites--model-checkpoints)
+4. [Running the API with Docker](#-running-the-api-with-docker)
+5. [Running the API manually](#-running-the-api-manually)
+6. [Accessing the API](#-accessing-the-api)
+7. [Dataset Preparation](#-dataset-preparation)
    * [Downloading the Dataset](#1-download-the-dataset)
    * [Generating Train/Test Splits](#2-optional-generate-traintest-splits)
    * [Generating Synthetic CT Scans](#3-generate-synthetic-ct-scans)
    * [Preprocessing Synthetic CTs](#4-preprocess-synthetic-ct-scans)
-7. [Model Training](#-model-training)
-8. [Running the Streamlit Demo](#%EF%B8%8F-running-the-streamlit-demo)
+8. [Model Training](#-model-training)
+9. [Running the Streamlit Demo](#%EF%B8%8F-running-the-streamlit-demo)
 
 ---
 
@@ -77,6 +78,34 @@ perx2ct/
 └── checkpoints/
     └── PerX2CT.ckpt
 ```
+
+---
+
+
+## 📈 Results
+
+### Training
+![AUC baseline vs proposed](data/assets/auc.png)
+**Figure:** Mean validation AUC per epoch (±95% confidence interval) for the baseline model (2D X-rays only, red) vs. our X2CT multimodal model (X-rays + synthetic 3D CTs, blue).
+
+The X2CT model consistently outperforms the baseline throughout training, with higher mean AUC and lower variance. This supports the effectiveness of integrating synthetic volumetric information into the diagnostic pipeline.
+We conducted a comparative evaluation to assess whether combining **synthetic 3D CT volumes** with 2D X-ray inputs improves pulmonary disease classification, compared to using X-rays alone.
+
+### 🔬 Statistical test
+
+- **Baseline**: 2D DenseNet-121 (CheXNet-style) trained on frontal and lateral chest X-rays.
+- **Proposed Method**: A multimodal classifier combining DenseNet-121 (X-rays) with Med3D (synthetic CT volumes from PerX2CT).
+- **Dataset**: Indiana Chest X-ray dataset, repurposed for multimodal training and evaluation.
+- **Evaluation**: 30 training iterations per model, using different initialization weights, with **bootstrapped test performance (10,000 samples)**.
+
+### 📊 Key Metrics
+
+| Metric     | Baseline (X-rays only) | X-rays + Synthetic CT (Ours) | Improvement | 95% CI       | p-value |
+|------------|------------------------|-------------------------------|-------------|--------------|---------|
+| **F1 Score** | 0.61                   | **0.68**                      | **+0.07**   | (0.03, 0.12) | < 0.001 |
+| **ROC AUC** | 0.80                   | **0.83**                      | **+0.03**   | (0.01, 0.05) | < 0.001 |
+
+> 🧪 These results indicate **statistically significant improvements** in classification performance when including synthetic CT volumes alongside traditional 2D images.
 
 ---
 
@@ -294,28 +323,3 @@ streamlit run app.py
 > The demo assumes synthetic volumes are of shape `128×128×128` stored as `.npy` files.
 
 ---
-
-## 📈 Results
-
-### Training
-![AUC baseline vs proposed](data/assets/auc.png)
-**Figure:** Mean validation AUC per epoch (±95% confidence interval) for the baseline model (2D X-rays only, red) vs. our X2CT multimodal model (X-rays + synthetic 3D CTs, blue).
-
-The X2CT model consistently outperforms the baseline throughout training, with higher mean AUC and lower variance. This supports the effectiveness of integrating synthetic volumetric information into the diagnostic pipeline.
-We conducted a comparative evaluation to assess whether combining **synthetic 3D CT volumes** with 2D X-ray inputs improves pulmonary disease classification, compared to using X-rays alone.
-
-### 🔬 Statistical test
-
-- **Baseline**: 2D DenseNet-121 (CheXNet-style) trained on frontal and lateral chest X-rays.
-- **Proposed Method**: A multimodal classifier combining DenseNet-121 (X-rays) with Med3D (synthetic CT volumes from PerX2CT).
-- **Dataset**: Indiana Chest X-ray dataset, repurposed for multimodal training and evaluation.
-- **Evaluation**: 30 training iterations per model, using different initialization weights, with **bootstrapped test performance (10,000 samples)**.
-
-### 📊 Key Metrics
-
-| Metric     | Baseline (X-rays only) | X-rays + Synthetic CT (Ours) | Improvement | 95% CI       | p-value |
-|------------|------------------------|-------------------------------|-------------|--------------|---------|
-| **F1 Score** | 0.61                   | **0.68**                      | **+0.07**   | (0.03, 0.12) | < 0.001 |
-| **ROC AUC** | 0.80                   | **0.83**                      | **+0.03**   | (0.01, 0.05) | < 0.001 |
-
-> 🧪 These results indicate **statistically significant improvements** in classification performance when including synthetic CT volumes alongside traditional 2D images.
