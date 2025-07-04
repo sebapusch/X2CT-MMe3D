@@ -11,7 +11,8 @@ It builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297) and 
 
 ![Model architecture](./data/assets/diagram.png)
 
-> **Note:** CT generation at inference currently supports **CPU only** due to PerX2CT constraints. GPU acceleration is not yet available.
+> [!NOTE]
+> CT generation at inference currently supports **CPU only** due to PerX2CT constraints. GPU acceleration is not yet available.
 
 ---
 
@@ -213,7 +214,7 @@ streamlit run app.py
 - **Red**: Baseline (2D X-rays only)  
 - **Blue**: X2CT-MMe3D (X-rays + synthetic CTs)
 
-> X2CT-MMe3D achieves consistently higher mean AUC and lower variance.
+> During training, X2CT-MMe3D achieves consistently higher mean AUC and lower variance.
 
 ### 🔬 Statistical Evaluation
 
