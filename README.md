@@ -242,9 +242,3 @@ X2CT-MMe3D/
 └── requirements.txt      # Python dependencies
 ```
 
----
-
-## 📬 Contact & Credits
-
-Built on [PerX2CT](https://github.com/dek924/PerX2CT)  
-Developed for multimodal learning and clinical research in resource-constrained settings.
