@@ -3,7 +3,7 @@
 **X2CT-MMe3D** is an AI pipeline for pulmonary disease diagnosis that leverages synthetic 3D CT volumes generated from paired chest X-rays.  
 It builds on [PerX2CT (arXiv:2303.05297)](https://arxiv.org/abs/2303.05297) and introduces:
 
-- A **multimodal architecture (MMe3D)** that learns from synthetic CTs and radiology reports  
+- A **multimodal architecture (MMe3D)** that learns from synthetic CTs and paired x-rays 
 - A complete **diagnosis pipeline** using 3D convolutional networks  
 - A **FastAPI backend**, a **Streamlit demo**, and tools for data preprocessing, training, and inference  
 
